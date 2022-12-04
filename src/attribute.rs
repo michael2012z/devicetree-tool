@@ -17,6 +17,12 @@ impl<T> Attribute<T> {
     }
 }
 
+impl<T> Display for Attribute<Option<T>> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: None", self.name)
+    }
+}
+
 impl Display for Attribute<u32> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.name, self.value)
@@ -61,6 +67,13 @@ impl Display for Attribute<&[u8]> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_attribute_none() {
+        let attr: Attribute<Option<u32>> = Attribute::new("name", None);
+        println!("{attr}");
+    }
+
     #[test]
     fn test_attribute_u32() {
         let attr = Attribute::new("name", 42u32);
