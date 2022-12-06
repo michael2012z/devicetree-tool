@@ -1,6 +1,8 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use crate::element::Element;
+
 pub struct Attribute<T> {
     name: String,
     value: T,
@@ -15,35 +17,31 @@ impl<T> Attribute<T> {
     }
 }
 
-pub trait InternalAttribute {
-    fn to_dts(&self) -> String;
-}
-
-impl<T> InternalAttribute for Attribute<Option<T>> {
+impl<T> Element for Attribute<Option<T>> {
     fn to_dts(&self) -> String {
         String::from(format!("{}: None", self.name))
     }
 }
 
-impl InternalAttribute for Attribute<u32> {
+impl Element for Attribute<u32> {
     fn to_dts(&self) -> String {
         String::from(format!("{}: {}", self.name, self.value))
     }
 }
 
-impl InternalAttribute for Attribute<f32> {
+impl Element for Attribute<f32> {
     fn to_dts(&self) -> String {
         String::from(format!("{}: {}", self.name, self.value))
     }
 }
 
-impl InternalAttribute for Attribute<&str> {
+impl Element for Attribute<&str> {
     fn to_dts(&self) -> String {
         String::from(format!("{}: {}", self.name, self.value))
     }
 }
 
-impl InternalAttribute for Attribute<&[u8]> {
+impl Element for Attribute<&[u8]> {
     fn to_dts(&self) -> String {
         let mut s = String::from(format!("{}: ", self.name));
         for u in self.value {
@@ -53,7 +51,7 @@ impl InternalAttribute for Attribute<&[u8]> {
     }
 }
 
-impl InternalAttribute for Attribute<&Vec<&str>> {
+impl Element for Attribute<&Vec<&str>> {
     fn to_dts(&self) -> String {
         let mut s = String::from(format!("{}: ", self.name));
         for seg in self.value {

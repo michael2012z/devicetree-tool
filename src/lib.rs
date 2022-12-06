@@ -2,5 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 pub mod attribute;
+pub mod element;
 pub mod node;
 pub mod tree;

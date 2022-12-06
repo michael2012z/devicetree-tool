@@ -1,12 +1,12 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::attribute::InternalAttribute;
+use crate::element::Element;
 use std::sync::{Arc, Mutex};
 
 pub struct Node {
     name: String,
-    attributes: Vec<Arc<Mutex<dyn InternalAttribute>>>,
+    attributes: Vec<Arc<Mutex<dyn Element>>>,
     sub_nodes: Vec<Arc<Mutex<Node>>>,
 }
 
@@ -19,15 +19,17 @@ impl Node {
         }
     }
 
-    pub fn add_attr(&mut self, attr: Arc<Mutex<dyn InternalAttribute>>) {
+    pub fn add_attr(&mut self, attr: Arc<Mutex<dyn Element>>) {
         self.attributes.push(attr);
     }
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
         self.sub_nodes.push(Arc::new(Mutex::new(sub_node)));
     }
+}
 
-    pub fn to_dts(&self) -> String {
+impl Element for Node {
+    fn to_dts(&self) -> String {
         let mut s = String::new();
         s.push_str(&format!("Node: {}", self.name));
         for attr in self.attributes.iter() {

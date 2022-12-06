@@ -1,6 +1,7 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use crate::element::Element;
 use crate::node::Node;
 
 pub struct Tree {
@@ -11,7 +12,10 @@ impl Tree {
     pub fn new(root: Node) -> Self {
         Tree { root }
     }
-    pub fn to_dts(&self) -> String {
+}
+
+impl Element for Tree {
+    fn to_dts(&self) -> String {
         self.root.to_dts()
     }
 }
