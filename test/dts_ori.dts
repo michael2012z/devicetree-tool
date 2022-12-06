@@ -1,0 +1,142 @@
+/dts-v1/;
+
+/ {
+	compatible = "linux,dummy-virt";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	interrupt-parent = <0x1>;
+
+	cpus {
+		#address-cells = <0x2>;
+		#size-cells = <0x0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,arm-v8";
+			enable-method = "psci";
+			reg = <0x0 0x0>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,arm-v8";
+			enable-method = "psci";
+			reg = <0x0 0x1>;
+		};
+
+		cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,arm-v8";
+			enable-method = "psci";
+			reg = <0x0 0x2>;
+		};
+
+		cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,arm-v8";
+			enable-method = "psci";
+			reg = <0x0 0x3>;
+		};
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x1 0x0>;
+	};
+
+	chosen {
+		bootargs = "keep_bootcon console=ttyAMA0 reboot=k panic=1 root=/dev/vda1 rw earlycon=pl011,mmio,0x09000000";
+	};
+
+	intc {
+		compatible = "arm,gic-v3";
+		interrupt-controller;
+		#interrupt-cells = <0x3>;
+		reg = <0x0 0x8ff0000 0x0 0x10000 0x0 0x8cf0000 0x0 0x300000>;
+		phandle = <0x1>;
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+		ranges;
+		interrupts = <0x1 0x9 0x4>;
+
+		msic {
+			compatible = "arm,gic-v3-its";
+			msi-controller;
+			phandle = <0x2>;
+			reg = <0x0 0x8cd0000 0x0 0x20000>;
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		always-on;
+		interrupts = <0x1 0xd 0x4 0x1 0xe 0x4 0x1 0xb 0x4 0x1 0xa 0x4>;
+	};
+
+	apb-pclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0x0>;
+		clock-frequency = <0x16e3600>;
+		clock-output-names = "clk24mhz";
+		phandle = <0x3>;
+	};
+
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "hvc";
+	};
+
+	rtc@9010000 {
+		compatible = "arm,pl031", "arm,primecell";
+		reg = <0x0 0x9010000 0x0 0x1000>;
+		interrupts = <0x0 0x0 0x4>;
+		clocks = <0x3>;
+		clock-names = "apb_pclk";
+	};
+
+	pl061@9020000 {
+		compatible = "arm,pl061", "arm,primecell";
+		reg = <0x0 0x9020000 0x0 0x1000>;
+		interrupts = <0x0 0x1 0x1>;
+		gpio-controller;
+		#gpio-cells = <0x2>;
+		clocks = <0x3>;
+		clock-names = "apb_pclk";
+		phandle = <0x4>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		#size-cells = <0x0>;
+		#address-cells = <0x1>;
+
+		poweroff {
+			label = "GPIO Key Poweroff";
+			linux,code = <0x74>;
+			gpios = <0x4 0x3 0x0>;
+		};
+	};
+
+	pl011@9000000 {
+		compatible = "arm,pl011", "arm,primecell";
+		reg = <0x0 0x9000000 0x0 0x1000>;
+		clocks = <0x3>;
+		clock-names = "apb_pclk";
+		interrupts = <0x0 0x2 0x1>;
+	};
+
+	pci {
+		compatible = "pci-host-ecam-generic";
+		device_type = "pci";
+		ranges = <0x2000000 0x0 0x10000000 0x0 0x10000000 0x0 0x20000000 0x3000000 0x1 0x40000000 0x1 0x40000000 0xfe 0xbfff0000>;
+		bus-range = <0x0 0x0>;
+		#address-cells = <0x3>;
+		#size-cells = <0x2>;
+		reg = <0x0 0x30000000 0x0 0x10000000>;
+		#interrupt-cells = <0x1>;
+		interrupt-map;
+		interrupt-map-mask;
+		dma-coherent;
+		msi-parent = <0x2>;
+	};
+};
