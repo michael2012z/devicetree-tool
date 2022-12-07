@@ -46,11 +46,8 @@ impl Element for Node {
             s.push_str("\n");
         }
 
-        if self.sub_nodes.len() > 0 {
-            s.push_str("\n");
-        }
-
         for sub_node in self.sub_nodes.iter() {
+            s.push_str("\n");
             s.push_str(&sub_node.lock().unwrap().to_dts(indent_level + 1));
             s.push_str("\n");
         }
