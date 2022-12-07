@@ -15,8 +15,12 @@ impl Tree {
 }
 
 impl Element for Tree {
-    fn to_dts(&self) -> String {
-        self.root.to_dts()
+    fn to_dts(&self, _indent_level: u32) -> String {
+        let mut dts = String::from("/dts-v1/;\n\n/ ");
+        let root_dts = self.root.to_dts(0);
+        dts.push_str(&root_dts);
+        dts.push_str("\n");
+        dts
     }
 }
 
@@ -29,6 +33,6 @@ mod tests {
     fn test_simple_tree() {
         let root = Node::new("root");
         let tree = Tree::new(root);
-        println!("{}", tree.to_dts());
+        println!("{}", tree.to_dts(0));
     }
 }

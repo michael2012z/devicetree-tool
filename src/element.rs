@@ -8,7 +8,7 @@
 //   * Property
 //
 pub trait Element {
-    fn to_dts(&self) -> String;
+    fn to_dts(&self, indent_level: u32) -> String;
     fn to_dtb(&self) -> Vec<u8> {
         unimplemented!()
     }

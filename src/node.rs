@@ -29,16 +29,32 @@ impl Node {
 }
 
 impl Element for Node {
-    fn to_dts(&self) -> String {
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
+        }
+
         let mut s = String::new();
-        s.push_str(&format!("Node: {}", self.name));
+        s.push_str(&format!("{indents}"));
+        if self.name.len() > 0 {
+            s.push_str(&format!("{} ", self.name));
+        }
+        s.push_str("{\n");
         for attr in self.attributes.iter() {
-            s.push_str(&attr.lock().unwrap().to_dts());
+            s.push_str(&attr.lock().unwrap().to_dts(indent_level + 1));
+            s.push_str("\n");
+        }
+
+        if self.sub_nodes.len() > 0 {
+            s.push_str("\n");
         }
 
         for sub_node in self.sub_nodes.iter() {
-            s.push_str(&sub_node.lock().unwrap().to_dts());
+            s.push_str(&sub_node.lock().unwrap().to_dts(indent_level + 1));
+            s.push_str("\n");
         }
+        s.push_str(&format!("{indents}}};"));
         s
     }
 }
@@ -53,8 +69,7 @@ mod tests {
         let attr = Arc::new(Mutex::new(Attribute::new("attr1", 42u32)));
         let mut node = Node::new("node");
         node.add_attr(attr);
-        node.add_attr(Arc::new(Mutex::new(Attribute::new("attr2", 12.3456f32))));
-        println!("Node: {}", node.to_dts());
+        println!("Node: {}", node.to_dts(0));
     }
 
     #[test]
@@ -62,13 +77,11 @@ mod tests {
         let attr = Arc::new(Mutex::new(Attribute::new("attr1", 42u32)));
         let mut node = Node::new("node1");
         node.add_attr(attr);
-        node.add_attr(Arc::new(Mutex::new(Attribute::new("attr12", 12.3456f32))));
 
         let mut sub_node = Node::new("node2");
-        sub_node.add_attr(Arc::new(Mutex::new(Attribute::new("attr3", 56.78f32))));
         sub_node.add_attr(Arc::new(Mutex::new(Attribute::new("attr4", 99u32))));
 
         node.add_sub_node(sub_node);
-        println!("Node: {}", node.to_dts());
+        println!("Node: {}", node.to_dts(0));
     }
 }

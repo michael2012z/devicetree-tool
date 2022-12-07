@@ -18,48 +18,90 @@ impl<T> Attribute<T> {
 }
 
 impl<T> Element for Attribute<Option<T>> {
-    fn to_dts(&self) -> String {
-        String::from(format!("{}: None", self.name))
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
+        }
+        String::from(format!("{indents}{};", self.name))
     }
 }
 
 impl Element for Attribute<u32> {
-    fn to_dts(&self) -> String {
-        String::from(format!("{}: {}", self.name, self.value))
-    }
-}
-
-impl Element for Attribute<f32> {
-    fn to_dts(&self) -> String {
-        String::from(format!("{}: {}", self.name, self.value))
-    }
-}
-
-impl Element for Attribute<&str> {
-    fn to_dts(&self) -> String {
-        String::from(format!("{}: {}", self.name, self.value))
-    }
-}
-
-impl Element for Attribute<&[u8]> {
-    fn to_dts(&self) -> String {
-        let mut s = String::from(format!("{}: ", self.name));
-        for u in self.value {
-            s.push(*u as char)
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
         }
+        String::from(format!("{indents}{} = <{:#x}>;", self.name, self.value))
+    }
+}
+
+impl Element for Attribute<String> {
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
+        }
+        String::from(format!("{indents}{} = \"{}\";", self.name, self.value))
+    }
+}
+
+impl Element for Attribute<Vec<u8>> {
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
+        }
+        let mut s = String::from(format!("{indents}{} = <", self.name));
+        for i in 0..self.value.len() {
+            let d = self.value[i];
+            if i > 0 {
+                s.push(' ')
+            }
+            s.push_str(&format!("{:#x}", d));
+        }
+        s.push_str(">;");
         s
     }
 }
 
-impl Element for Attribute<&Vec<&str>> {
-    fn to_dts(&self) -> String {
-        let mut s = String::from(format!("{}: ", self.name));
-        for seg in self.value {
-            if s.len() > 0 {
-                s.push('~')
-            }
-            s.push_str(seg);
+impl Element for Attribute<Vec<u32>> {
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
         }
+        let mut s = String::from(format!("{indents}{} = <", self.name));
+        for i in 0..self.value.len() {
+            let d = self.value[i];
+            if i > 0 {
+                s.push(' ')
+            }
+            s.push_str(&format!("{:#x}", d));
+        }
+        s.push_str(">;");
+        s
+    }
+}
+
+impl Element for Attribute<Vec<String>> {
+    fn to_dts(&self, indent_level: u32) -> String {
+        let mut indents = String::new();
+        for i in 0..indent_level {
+            indents.push('\t')
+        }
+        let mut s = String::from(format!("{indents}{} = ", self.name));
+        for i in 0..self.value.len() {
+            let seg = &self.value[i];
+            if i > 0 {
+                s.push(',')
+            }
+            s.push('\"');
+            s.push_str(seg);
+            s.push('\"');
+        }
+        s.push(';');
         s
     }
 }
@@ -71,43 +113,35 @@ mod tests {
     #[test]
     fn test_attribute_none() {
         let attr: Attribute<Option<u32>> = Attribute::new("name", None);
-        println!("{}", attr.to_dts());
+        println!("{}", attr.to_dts(0));
     }
 
     #[test]
     fn test_attribute_u32() {
         let attr = Attribute::new("name", 42u32);
-        println!("{}", attr.to_dts());
-    }
-
-    #[test]
-    fn test_attribute_f32() {
-        let attr = Attribute::new("name", 12.3456f32);
-        println!("{}", attr.to_dts());
+        println!("{}", attr.to_dts(0));
     }
 
     #[test]
     fn test_attribute_strs() {
         let string1 = String::from("&str abc");
         let string2 = String::from("def");
-        let strs = vec![string1.as_str(), string2.as_str()];
-        let attr = Attribute::new("name", &strs);
-        println!("{}", attr.to_dts());
+        let strs = vec![string1, string2];
+        let attr = Attribute::new("name", strs);
+        println!("{}", attr.to_dts(0));
     }
 
     #[test]
     fn test_attribute_str() {
-        let string = String::from("&str abc");
-        let s = string.as_str();
+        let s = String::from("&str abc");
         let attr = Attribute::new("name", s);
-        println!("{}", attr.to_dts());
+        println!("{}", attr.to_dts(0));
     }
 
     #[test]
     fn test_attribute_bytes() {
-        let data_string = String::from("bytes xyz");
-        let bytes = data_string.as_bytes();
+        let bytes = vec![0u8, 1u8, 2u8, 3u8];
         let attr = Attribute::new("name", bytes);
-        println!("{}", attr.to_dts());
+        println!("{}", attr.to_dts(0));
     }
 }
