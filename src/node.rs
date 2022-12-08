@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::element::Element;
+use crate::utils::Utils;
 use std::sync::{Arc, Mutex};
 
 pub struct Node {
@@ -30,12 +31,8 @@ impl Node {
 
 impl Element for Node {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-
         let mut s = String::new();
+        let indents = Utils::indent(indent_level);
         s.push_str(&format!("{indents}"));
         if self.name.len() > 0 {
             s.push_str(&format!("{} ", self.name));
