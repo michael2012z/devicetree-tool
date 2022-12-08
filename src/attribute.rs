@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::element::Element;
+use crate::utils::Utils;
 
 pub struct Attribute<T> {
     name: String,
@@ -19,41 +20,35 @@ impl<T> Attribute<T> {
 
 impl Element for Attribute<Option<u32>> {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-        String::from(format!("{indents}{};", self.name))
+        String::from(format!("{}{};", Utils::indent(indent_level), self.name))
     }
 }
 
 impl Element for Attribute<u32> {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-        String::from(format!("{indents}{} = <{:#x}>;", self.name, self.value))
+        String::from(format!(
+            "{}{} = <{:#x}>;",
+            Utils::indent(indent_level),
+            self.name,
+            self.value
+        ))
     }
 }
 
 impl Element for Attribute<String> {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-        String::from(format!("{indents}{} = \"{}\";", self.name, self.value))
+        String::from(format!(
+            "{}{} = \"{}\";",
+            Utils::indent(indent_level),
+            self.name,
+            self.value
+        ))
     }
 }
 
 impl Element for Attribute<Vec<u8>> {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-        let mut s = String::from(format!("{indents}{} = <", self.name));
+        let mut s = String::from(format!("{}{} = <", Utils::indent(indent_level), self.name));
         for i in 0..self.value.len() {
             let d = self.value[i];
             if i > 0 {
@@ -68,11 +63,7 @@ impl Element for Attribute<Vec<u8>> {
 
 impl Element for Attribute<Vec<u32>> {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-        let mut s = String::from(format!("{indents}{} = <", self.name));
+        let mut s = String::from(format!("{}{} = <", Utils::indent(indent_level), self.name));
         for i in 0..self.value.len() {
             let d = self.value[i];
             if i > 0 {
@@ -87,11 +78,7 @@ impl Element for Attribute<Vec<u32>> {
 
 impl Element for Attribute<Vec<String>> {
     fn to_dts(&self, indent_level: u32) -> String {
-        let mut indents = String::new();
-        for i in 0..indent_level {
-            indents.push('\t')
-        }
-        let mut s = String::from(format!("{indents}{} = ", self.name));
+        let mut s = String::from(format!("{}{} = ", Utils::indent(indent_level), self.name));
         for i in 0..self.value.len() {
             let seg = &self.value[i];
             if i > 0 {
