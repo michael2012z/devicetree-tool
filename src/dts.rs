@@ -189,12 +189,12 @@ mod tests {
             "#interrupt-cells",
             1u32,
         ))));
-        let interrupt_map: Attribute<Option<u32>> = Attribute::new("interrupt-map", None);
-        pci.add_attr(Arc::new(Mutex::new(interrupt_map)));
-        let interrupt_map_mask: Attribute<Option<u32>> = Attribute::new("interrupt-map-mask", None);
-        pci.add_attr(Arc::new(Mutex::new(interrupt_map_mask)));
-        let dma_coherent: Attribute<Option<u32>> = Attribute::new("dma-coherent", None);
-        pci.add_attr(Arc::new(Mutex::new(dma_coherent)));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new("interrupt-map", None))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "interrupt-map-mask",
+            None,
+        ))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new("dma-coherent", None))));
         pci.add_attr(Arc::new(Mutex::new(Attribute::new("msi-parent", 0x2u32))));
 
         root.add_sub_node(pci);

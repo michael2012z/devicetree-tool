@@ -17,7 +17,7 @@ impl<T> Attribute<T> {
     }
 }
 
-impl<T> Element for Attribute<Option<T>> {
+impl Element for Attribute<Option<u32>> {
     fn to_dts(&self, indent_level: u32) -> String {
         let mut indents = String::new();
         for i in 0..indent_level {
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_attribute_none() {
-        let attr: Attribute<Option<u32>> = Attribute::new("name", None);
+        let attr = Attribute::new("name", None);
         println!("{}", attr.to_dts(0));
     }
 
