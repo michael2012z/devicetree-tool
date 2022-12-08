@@ -1,0 +1,23 @@
+/dts-v1/;
+
+/ {
+	compatible = "linux,dummy-virt";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	interrupt-parent = <0x1>;
+
+	pci {
+		compatible = "pci-host-ecam-generic";
+		device_type = "pci";
+		ranges = <0x2000000 0x0 0x10000000 0x0 0x10000000 0x0 0x20000000 0x3000000 0x1 0x40000000 0x1 0x40000000 0xfe 0xbfff0000>;
+		bus-range = <0x0 0x0>;
+		#address-cells = <0x3>;
+		#size-cells = <0x2>;
+		reg = <0x0 0x30000000 0x0 0x10000000>;
+		#interrupt-cells = <0x1>;
+		interrupt-map;
+		interrupt-map-mask;
+		dma-coherent;
+		msi-parent = <0x2>;
+	};
+};

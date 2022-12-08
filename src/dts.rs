@@ -122,4 +122,86 @@ mod tests {
         println!("{dts}");
         assert_eq!(dts_2_text, dts);
     }
+
+    #[test]
+    fn test_dts_3() {
+        // Read the DTS text from test data folder
+        let dts_3_text = std::fs::read_to_string("test/dts_3.dts").unwrap();
+        println!("{dts_3_text}");
+
+        // Build the same device tree with API and compare
+        let mut root = Node::new("");
+        root.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "compatible",
+            vec![String::from("linux,dummy-virt")],
+        ))));
+        root.add_attr(Arc::new(Mutex::new(Attribute::new("#address-cells", 2u32))));
+        root.add_attr(Arc::new(Mutex::new(Attribute::new("#size-cells", 2u32))));
+        root.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "interrupt-parent",
+            1u32,
+        ))));
+
+        // PCI
+        let mut pci = Node::new("pci");
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "compatible",
+            vec![String::from("pci-host-ecam-generic")],
+        ))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "device_type",
+            String::from("pci"),
+        ))));
+
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "ranges",
+            vec![
+                0x2000000u32,
+                0x0u32,
+                0x10000000u32,
+                0x0u32,
+                0x10000000u32,
+                0x0u32,
+                0x20000000u32,
+                0x3000000u32,
+                0x1u32,
+                0x40000000u32,
+                0x1u32,
+                0x40000000u32,
+                0xfeu32,
+                0xbfff0000u32,
+            ],
+        ))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "bus-range",
+            vec![0u32, 0u32],
+        ))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "#address-cells",
+            0x3u32,
+        ))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new("#size-cells", 0x2u32))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "reg",
+            vec![0u32, 0x30000000u32, 0x0u32, 0x10000000u32],
+        ))));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new(
+            "#interrupt-cells",
+            1u32,
+        ))));
+        let interrupt_map: Attribute<Option<u32>> = Attribute::new("interrupt-map", None);
+        pci.add_attr(Arc::new(Mutex::new(interrupt_map)));
+        let interrupt_map_mask: Attribute<Option<u32>> = Attribute::new("interrupt-map-mask", None);
+        pci.add_attr(Arc::new(Mutex::new(interrupt_map_mask)));
+        let dma_coherent: Attribute<Option<u32>> = Attribute::new("dma-coherent", None);
+        pci.add_attr(Arc::new(Mutex::new(dma_coherent)));
+        pci.add_attr(Arc::new(Mutex::new(Attribute::new("msi-parent", 0x2u32))));
+
+        root.add_sub_node(pci);
+
+        let dt = Tree::new(root);
+        let dts = dt.to_dts(0);
+        println!("{dts}");
+        assert_eq!(dts_3_text, dts);
+    }
 }
