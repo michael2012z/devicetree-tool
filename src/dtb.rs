@@ -57,6 +57,18 @@ impl Dtb {
             size_dt_struct,
         }
     }
+
+    fn get_string(strings_block: &[u8], offset: u32) -> String {
+        let mut s = String::new();
+        for i in (offset as usize)..strings_block.len() {
+            if strings_block[i] != 0 {
+                s.push(strings_block[i] as char)
+            } else {
+                break;
+            }
+        }
+        s
+    }
 }
 
 #[cfg(test)]
@@ -80,5 +92,27 @@ mod tests {
         assert_eq!(0xd00dfeed, header.magic);
         assert_eq!(17, header.version);
         assert_eq!(16, header.last_comp_version);
+    }
+
+    #[test]
+    fn test_dtb_parse_strings() {
+        let mut f = File::open("test/dtb_0.dtb").unwrap();
+        let mut buffer = Vec::new();
+
+        // read the whole file
+        f.read_to_end(&mut buffer).unwrap();
+
+        // parse the header
+        let header = Dtb::parse_header(&buffer[0..40]);
+
+        // get the strings block
+        let strings_block = &buffer[(header.off_dt_strings as usize)
+            ..(header.off_dt_strings + header.size_dt_strings) as usize];
+
+        assert_eq!(Dtb::get_string(strings_block, 0), "compatible");
+        assert_eq!(Dtb::get_string(strings_block, 11), "#address-cells");
+        assert_eq!(Dtb::get_string(strings_block, 38), "interrupt-parent");
+        assert_eq!(Dtb::get_string(strings_block, 94), "interrupt-controller");
+        assert_eq!(Dtb::get_string(strings_block, 147), "interrupts");
     }
 }
