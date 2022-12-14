@@ -16,6 +16,11 @@ struct DtbHeader {
     size_dt_struct: u32,
 }
 
+struct ReserveEntry {
+    address: u64,
+    size: u64,
+}
+
 impl std::fmt::Display for DtbHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "magic: 0x{:x}", self.magic)?;
@@ -56,6 +61,24 @@ impl Dtb {
             size_dt_strings,
             size_dt_struct,
         }
+    }
+
+    fn parse_reservation_block(reservation_block: &[u8]) -> Vec<ReserveEntry> {
+        let mut v = Vec::new();
+        for i in 0..(reservation_block.len() / 16 as usize) {
+            let address = u64::from_be_bytes(
+                reservation_block[(i * 16)..(i * 16 + 8)]
+                    .try_into()
+                    .unwrap(),
+            );
+            let size = u64::from_be_bytes(
+                reservation_block[(i * 16 + 8)..(i * 16 + 16)]
+                    .try_into()
+                    .unwrap(),
+            );
+            v.push(ReserveEntry { address, size })
+        }
+        v
     }
 
     fn get_string(strings_block: &[u8], offset: u32) -> String {
@@ -114,5 +137,37 @@ mod tests {
         assert_eq!(Dtb::get_string(strings_block, 38), "interrupt-parent");
         assert_eq!(Dtb::get_string(strings_block, 94), "interrupt-controller");
         assert_eq!(Dtb::get_string(strings_block, 147), "interrupts");
+    }
+
+    #[test]
+    fn test_dtb_reservation_block() {
+        let mut f = File::open("test/dtb_0.dtb").unwrap();
+        let mut buffer = Vec::new();
+
+        // read the whole file
+        f.read_to_end(&mut buffer).unwrap();
+
+        // parse the header
+        let header = Dtb::parse_header(&buffer[0..40]);
+
+        // parse the reservation block
+        let mut addr = header.off_mem_rsvmap as usize;
+
+        while addr < header.total_size as usize {
+            let address = u64::from_be_bytes(buffer[addr..(addr + 8)].try_into().unwrap());
+            let size = u64::from_be_bytes(buffer[(addr + 8)..(addr + 16)].try_into().unwrap());
+
+            println!("ReserveEntry: addr 0x{:x}, size 0x{:x}", address, size);
+            if address == 0 && size == 0 {
+                break;
+            }
+            addr = addr + 16;
+        }
+        let reservation_block = &buffer[(header.off_mem_rsvmap as usize)..(addr)];
+
+        let v = Dtb::parse_reservation_block(reservation_block);
+        for r in v {
+            println!("ReserveEntry: addr 0x{:x}, size 0x{:x}", r.address, r.size);
+        }
     }
 }
