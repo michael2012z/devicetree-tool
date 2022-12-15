@@ -92,6 +92,144 @@ impl Dtb {
         }
         s
     }
+
+    // struct_block starts immediately after the FDT_BEGIN_NODE token,
+    // in the beginning it should be the node name.
+    // The end of struct_block should be a FDT_END_NODE token
+    // Return the position next to the FDT_END_NODE token. That is also the length
+    // from the node name to the end of the node.
+    fn parse_structure_node(struct_block: &[u8]) -> usize {
+        let mut pos = 0usize;
+        // find the node name
+        let mut name = String::new();
+        while struct_block[pos] != 0 {
+            name.push(struct_block[pos] as char);
+            pos = pos + 1;
+        }
+        // move to the next postion after the zero-terminated string
+        pos = pos + 1;
+        // align to 4-bytes
+        pos = (pos + 3) >> 2 << 2;
+        println!("Node name: {}, next pos = 0x{:x}", name, pos);
+
+        while pos < struct_block.len() {
+            let token = u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
+            pos = pos + 4;
+            match token {
+                0 => {
+                    println!("zeroed pedding at 0x{:x}", pos - 4);
+                }
+                1 => {
+                    println!("FDT_BEGIN_NODE at 0x{:x}", pos - 4);
+                    let node_len = Dtb::parse_structure_node(&struct_block[pos..]);
+                    pos = pos + node_len;
+                }
+                2 => {
+                    println!("FDT_END_NODE at 0x{:x}", pos - 4);
+                    return pos;
+                }
+                3 => {
+                    println!("FDT_PROP at 0x{:x}", pos - 4);
+                    let prop_len = Dtb::parse_structure_prop(&struct_block[pos..]);
+                    pos = pos + prop_len;
+                }
+                4 => {
+                    println!("FDT_NOP at 0x{:x}", pos - 4);
+                }
+                _ => {
+                    panic!("unknow token 0x{:x} at 0x{:x}", token, pos - 4)
+                }
+            }
+        }
+        panic!("Node not closed")
+    }
+
+    fn parse_structure_prop(struct_block: &[u8]) -> usize {
+        let mut pos = 0usize;
+        let prop_len = u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
+        pos = pos + 4;
+        let prop_nameoff = u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
+        pos = pos + 4;
+        let prop_data = &struct_block[pos..(pos + prop_len as usize)];
+        pos = pos + prop_len as usize;
+        pos = (pos + 3) >> 2 << 2;
+        println!(
+            "Property: name_pos 0x{:x}, len 0x{:x}, data {:#?}, next pos 0x{:x}",
+            prop_nameoff, prop_len, prop_data, pos
+        );
+        pos
+    }
+
+    fn parse_structure_block(struct_block: &[u8]) {
+        //Dtb::print_structure_block(struct_block);
+        let token = u32::from_be_bytes(struct_block[0..4].try_into().unwrap());
+        // The first token must be the root node of the tree
+        if token != 1 {
+            panic!("Root node is not found")
+        }
+
+        let next_pos = 4 + Dtb::parse_structure_node(&struct_block[4..]);
+        let token = u32::from_be_bytes(struct_block[next_pos..(next_pos + 4)].try_into().unwrap());
+        // The FDT_END token should follow the root node immediately
+        if token != 9 {
+            panic!("Root node is not found")
+        }
+    }
+
+    fn print_structure_block(struct_block: &[u8]) {
+        let mut pos = 0usize;
+        while pos < struct_block.len() {
+            let token = u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
+            pos = pos + 4;
+            match token {
+                0 => {
+                    println!("zeroed pedding at 0x{:x}", pos - 4);
+                }
+                1 => {
+                    println!("FDT_BEGIN_NODE at 0x{:x}", pos - 4);
+                    // find the node name
+                    let mut name = String::new();
+                    while struct_block[pos] != 0 {
+                        name.push(struct_block[pos] as char);
+                        pos = pos + 1;
+                    }
+                    // move to the next postion after the zero-terminated string
+                    pos = pos + 1;
+                    // align to 4-bytes
+                    pos = (pos + 3) >> 2 << 2;
+                    println!("Node name: {}, next pos = 0x{:x}", name, pos)
+                }
+                2 => {
+                    println!("FDT_END_NODE at 0x{:x}", pos - 4);
+                }
+                3 => {
+                    println!("FDT_PROP at 0x{:x}", pos - 4);
+                    let prop_len =
+                        u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
+                    pos = pos + 4;
+                    let prop_nameoff =
+                        u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
+                    pos = pos + 4;
+                    let prop_data = &struct_block[pos..(pos + prop_len as usize)];
+                    pos = pos + prop_len as usize;
+                    pos = (pos + 3) >> 2 << 2;
+                    println!(
+                        "Property: name_pos 0x{:x}, len 0x{:x}, data {:#?}, next pos 0x{:x}",
+                        prop_nameoff, prop_len, prop_data, pos
+                    );
+                }
+                4 => {
+                    println!("FDT_NOP at 0x{:x}", pos - 4);
+                }
+                9 => {
+                    println!("FDT_END at 0x{:x}", pos - 4);
+                }
+                _ => {
+                    panic!("unknow token 0x{:x} at 0x{:x}", token, pos - 4)
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -169,5 +307,23 @@ mod tests {
         for r in v {
             println!("ReserveEntry: addr 0x{:x}, size 0x{:x}", r.address, r.size);
         }
+    }
+
+    #[test]
+    fn test_dtb_parse_structure_block() {
+        let mut f = File::open("test/dtb_0.dtb").unwrap();
+        let mut buffer = Vec::new();
+
+        // read the whole file
+        f.read_to_end(&mut buffer).unwrap();
+
+        // parse the header
+        let header = Dtb::parse_header(&buffer[0..40]);
+
+        // get the struct block
+        let struct_block = &buffer[(header.off_dt_struct as usize)
+            ..(header.off_dt_struct + header.size_dt_struct) as usize];
+
+        Dtb::parse_structure_block(struct_block);
     }
 }
