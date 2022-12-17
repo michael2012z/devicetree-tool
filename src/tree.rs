@@ -1,7 +1,6 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::element::Element;
 use crate::node::Node;
 
 pub struct Tree {
@@ -12,10 +11,8 @@ impl Tree {
     pub fn new(root: Node) -> Self {
         Tree { root }
     }
-}
 
-impl Element for Tree {
-    fn to_dts(&self, _indent_level: u32) -> String {
+    pub fn to_dts(&self, _indent_level: u32) -> String {
         let mut dts = String::from("/dts-v1/;\n\n/ ");
         let root_dts = self.root.to_dts(0);
         dts.push_str(&root_dts);

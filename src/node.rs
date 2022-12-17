@@ -1,13 +1,13 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::element::Element;
+use crate::attribute::Attribute;
 use crate::utils::Utils;
 use std::rc::Rc;
 
 pub struct Node {
     name: String,
-    attributes: Vec<Rc<dyn Element>>,
+    attributes: Vec<Rc<Attribute>>,
     sub_nodes: Vec<Rc<Node>>,
 }
 
@@ -20,17 +20,15 @@ impl Node {
         }
     }
 
-    pub fn add_attr(&mut self, attr: impl Element + 'static) {
+    pub fn add_attr(&mut self, attr: Attribute) {
         self.attributes.push(Rc::new(attr));
     }
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
         self.sub_nodes.push(Rc::new(sub_node));
     }
-}
 
-impl Element for Node {
-    fn to_dts(&self, indent_level: u32) -> String {
+    pub fn to_dts(&self, indent_level: u32) -> String {
         let mut s = String::new();
         let indents = Utils::indent(indent_level);
         s.push_str(&format!("{indents}"));
@@ -60,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_simple_node() {
-        let attr = Attribute::new("attr1", 42u32);
+        let attr = Attribute::new_u32("attr1", 42);
         let mut node = Node::new("node");
         node.add_attr(attr);
         println!("Node: {}", node.to_dts(0));
@@ -68,12 +66,12 @@ mod tests {
 
     #[test]
     fn test_sub_node() {
-        let attr = Attribute::new("attr1", 42u32);
+        let attr = Attribute::new_u32("attr1", 42);
         let mut node = Node::new("node1");
         node.add_attr(attr);
 
         let mut sub_node = Node::new("node2");
-        sub_node.add_attr(Attribute::new("attr4", 99u32));
+        sub_node.add_attr(Attribute::new_u32("attr4", 99));
 
         node.add_sub_node(sub_node);
         println!("Node: {}", node.to_dts(0));

@@ -226,7 +226,7 @@ impl DtbParser {
         panic!("Node not closed")
     }
 
-    fn parse_structure_prop(&self, struct_block: &[u8]) -> (usize, Attribute<Vec<u8>>) {
+    fn parse_structure_prop(&self, struct_block: &[u8]) -> (usize, Attribute) {
         let mut pos = 0usize;
         let prop_len = u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
         pos = pos + 4;
@@ -240,15 +240,13 @@ impl DtbParser {
             prop_nameoff, prop_len, prop_data, pos
         );
         let attr_name = self.get_string(prop_nameoff);
-        let attribute = Attribute::new(&attr_name, prop_data.to_owned());
+        let attribute = Attribute::new_u8s(&attr_name, prop_data.to_owned());
         (pos, attribute)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::element::Element;
-
     use super::*;
     use std::fs::File;
     use std::io::prelude::*;
