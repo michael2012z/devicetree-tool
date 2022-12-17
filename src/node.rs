@@ -6,9 +6,9 @@ use crate::utils::Utils;
 use std::rc::Rc;
 
 pub struct Node {
-    name: String,
-    attributes: Vec<Rc<Attribute>>,
-    sub_nodes: Vec<Rc<Node>>,
+    pub name: String,
+    pub attributes: Vec<Rc<Attribute>>,
+    pub sub_nodes: Vec<Rc<Node>>,
 }
 
 impl Node {
