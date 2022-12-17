@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 use crate::node::Node;
+use std::rc::Rc;
 
 pub struct Tree {
-    root: Node,
+    pub root: Rc<Node>,
 }
 
 impl Tree {
     pub fn new(root: Node) -> Self {
-        Tree { root }
+        Tree {
+            root: Rc::new(root),
+        }
     }
 
     pub fn to_dts(&self, _indent_level: u32) -> String {
