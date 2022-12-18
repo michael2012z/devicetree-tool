@@ -283,8 +283,8 @@ impl DtbGenerator {
 
     pub fn generate(&mut self) -> Vec<u8> {
         let mut reservation_block = self.generate_reservation_block();
-        let mut strings_block = self.generate_strings_block();
         let mut structure_block = self.generate_structure_block();
+        let mut strings_block = self.generate_strings_block();
 
         let mut header_magic = 0xd00dfeedu32.to_be_bytes().to_vec();
         let header_total_size =
@@ -481,7 +481,58 @@ mod tests {
     }
 
     #[test]
-    fn test_dtb_0() {
+    fn test_dtb_generate_0() {
+        // Build a simple device tree
+        let mut root = Node::new("");
+        root.add_attr(Attribute::new_strings(
+            "compatible",
+            vec![String::from("linux,dummy-virt")],
+        ));
+        let tree = Tree::new(root);
+        let dtb_bytes = Dtb::generate_dtb_bytes(tree);
+        let tree = Dtb::parse_dtb_bytes(&dtb_bytes);
+        let s = tree.to_dts(0);
+        println!("{}\n{}", s.len(), s);
+        assert_eq!(tree.root.name, "");
+        assert_eq!(tree.root.attributes[0].name, "compatible");
+        assert_eq!(tree.root.attributes[0].value.len(), 17);
+    }
+
+    #[test]
+    fn test_dtb_generate_1() {
+        // Build a simple device tree
+        let mut root = Node::new("");
+        root.add_attr(Attribute::new_strings(
+            "compatible",
+            vec![String::from("linux,dummy-virt")],
+        ));
+        root.add_attr(Attribute::new_u32("#address-cells", 2u32));
+        root.add_attr(Attribute::new_u32("#size-cells", 2u32));
+        root.add_attr(Attribute::new_u32("interrupt-parent", 1u32));
+        let tree = Tree::new(root);
+        let s = tree.to_dts(0);
+        println!("{}\n{}", s.len(), s);
+        assert_eq!(tree.root.attributes[0].name, "compatible");
+        assert_eq!(tree.root.attributes[0].value.len(), 17);
+        assert_eq!(tree.root.attributes[1].name, "#address-cells");
+        assert_eq!(
+            u32::from_be_bytes(tree.root.attributes[1].value[0..4].try_into().unwrap()),
+            2u32
+        );
+        assert_eq!(tree.root.attributes[2].name, "#size-cells");
+        assert_eq!(
+            u32::from_be_bytes(tree.root.attributes[2].value[0..4].try_into().unwrap()),
+            2u32
+        );
+        assert_eq!(tree.root.attributes[3].name, "interrupt-parent");
+        assert_eq!(
+            u32::from_be_bytes(tree.root.attributes[3].value[0..4].try_into().unwrap()),
+            1u32
+        );
+    }
+
+    #[test]
+    fn test_dtb_parse_0() {
         let mut f = File::open("test/dtb_0.dtb").unwrap();
         let mut buffer = Vec::new();
 
@@ -489,13 +540,38 @@ mod tests {
         f.read_to_end(&mut buffer).unwrap();
 
         let tree = Dtb::parse_dtb_bytes(&buffer);
-        let s = tree.to_dts(0);
-        assert_eq!(s.len(), 5708);
-        println!("{}\n{}", s.len(), s);
+        let tree_string = tree.to_dts(0);
+        println!("{}\n{}", tree_string.len(), tree_string);
+
+        // find the number of "="
+        let mut str = tree_string.as_str();
+        let mut count = 0;
+        loop {
+            if let Some(index) = str.find("=") {
+                count = count + 1;
+                str = &str[(index + 1)..];
+            } else {
+                break;
+            }
+        }
+        assert_eq!(count, 84);
+
+        // find the number of "};"
+        let mut str = tree_string.as_str();
+        let mut count = 0;
+        loop {
+            if let Some(index) = str.find("};") {
+                count = count + 1;
+                str = &str[(index + 2)..];
+            } else {
+                break;
+            }
+        }
+        assert_eq!(count, 19);
     }
 
     #[test]
-    fn test_dtb_1() {
+    fn test_dtb_generate_9() {
         let mut f = File::open("test/dtb_0.dtb").unwrap();
         let mut buffer = Vec::new();
 
@@ -504,11 +580,36 @@ mod tests {
 
         let tree = Dtb::parse_dtb_bytes(&buffer);
         let dtb_bytes = Dtb::generate_dtb_bytes(tree);
-        // TODO: The generated DTB length is shorter than source GDB. Debug.
-        // assert_eq!(dtb_bytes.len(), 2672);
+
+        // parse the generated DTB
         let tree = Dtb::parse_dtb_bytes(&dtb_bytes);
-        let s = tree.to_dts(0);
-        println!("{}\n{}", s.len(), s);
-        //assert_eq!(s.len(), 5708);
+        let tree_string = tree.to_dts(0);
+        println!("{}\n{}", tree_string.len(), tree_string);
+
+        // find the number of "="
+        let mut str = tree_string.as_str();
+        let mut count = 0;
+        loop {
+            if let Some(index) = str.find("=") {
+                count = count + 1;
+                str = &str[(index + 1)..];
+            } else {
+                break;
+            }
+        }
+        assert_eq!(count, 84);
+
+        // find the number of "};"
+        let mut str = tree_string.as_str();
+        let mut count = 0;
+        loop {
+            if let Some(index) = str.find("};") {
+                count = count + 1;
+                str = &str[(index + 2)..];
+            } else {
+                break;
+            }
+        }
+        assert_eq!(count, 19);
     }
 }
