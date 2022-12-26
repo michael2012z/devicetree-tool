@@ -13,7 +13,10 @@ impl DtsParser {
     // Remove DTS header.
     fn parse(dts: &[u8]) {
         // TODO: Compiler instructions
-        // TODO: Remove comments
+
+        let dts = &DtsParser::remove_c_style_comments(dts);
+        let dts = &DtsParser::remove_cpp_style_comments(dts);
+
         // The first item must be the DTS version
         let mut word: Vec<u8> = vec![];
         let mut dts_version: Option<String> = None;
@@ -75,6 +78,94 @@ impl DtsParser {
         if tail.trim().len() != 0 {
             panic!("Format error: unfinished content: {}", tail);
         }
+    }
+
+    // Return the space of a C-style comment: (start location, size)
+    fn find_c_comment(text: &[u8]) -> Option<(usize, usize)> {
+        if let Some(comment_start) = text
+            .windows(2)
+            .position(|window| window == &['/' as u8, '*' as u8])
+        {
+            if let Some(comment_end) = text[comment_start..]
+                .windows(2)
+                .position(|window| window == &['*' as u8, '/' as u8])
+            {
+                Some((comment_start, comment_end + 2))
+            } else {
+                panic!("Format error: C-style comments not enclosed")
+            }
+        } else {
+            None
+        }
+    }
+
+    // Return the space of a C-style comment: (start location, size)
+    fn find_cpp_comment(text: &[u8]) -> Option<(usize, usize)> {
+        if let Some(comment_start) = text
+            .windows(2)
+            .position(|window| window == &['/' as u8, '/' as u8])
+        {
+            let comment_size = if let Some(comment_end) = text[comment_start..]
+                .windows(1)
+                .position(|window| window == &['\n' as u8])
+            {
+                comment_end + 1
+            } else {
+                text.len() - comment_start
+            };
+            Some((comment_start, comment_size))
+        } else {
+            None
+        }
+    }
+
+    fn remove_c_style_comments(dts: &[u8]) -> Vec<u8> {
+        let mut copy_start = 0;
+        let mut new_dts: Vec<u8> = vec![];
+        loop {
+            if let Some((comment_offset, comment_size)) =
+                DtsParser::find_c_comment(&dts[copy_start..])
+            {
+                for u in &dts[copy_start..(copy_start + comment_offset)] {
+                    new_dts.push(*u)
+                }
+
+                // And update copy_start to the new location after the comment
+                copy_start = copy_start + comment_offset + comment_size;
+            } else {
+                // No (more) comment was found, copy the text to the end
+                // TODO: Copy from copy start ot the end of dts
+                for u in &dts[copy_start..] {
+                    new_dts.push(*u)
+                }
+                break;
+            }
+        }
+        new_dts
+    }
+
+    fn remove_cpp_style_comments(dts: &[u8]) -> Vec<u8> {
+        let mut copy_start = 0;
+        let mut new_dts: Vec<u8> = vec![];
+        loop {
+            if let Some((comment_offset, comment_size)) =
+                DtsParser::find_cpp_comment(&dts[copy_start..])
+            {
+                for u in &dts[copy_start..(copy_start + comment_offset)] {
+                    new_dts.push(*u)
+                }
+
+                // And update copy_start to the new location after the comment
+                copy_start = copy_start + comment_offset + comment_size;
+            } else {
+                // No (more) comment was found, copy the text to the end
+                for u in &dts[copy_start..] {
+                    new_dts.push(*u)
+                }
+                break;
+            }
+        }
+        new_dts
     }
 
     fn parse_node(name: String, dts: &[u8]) -> Node {
@@ -361,5 +452,62 @@ mod tests {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_ori.dts").unwrap();
         DtsParser::parse(&dts);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_c_style_comments_0() {
+        let text = "abcdefg /*xxxx xxx xxx */ abcdefg";
+        let new_text = DtsParser::remove_c_style_comments(text.as_bytes());
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!("abcdefg  abcdefg", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_c_style_comments_1() {
+        let text = "abcdefg\n  /*xxxx \n   *xxx xxx */ \nabcdefg /*****/ /**//**//****/abc";
+        let new_text = DtsParser::remove_c_style_comments(text.as_bytes());
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!("abcdefg\n   \nabcdefg  abc", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_c_style_comments_2() {
+        let text = "/*xxxx \n   *xxx xxx */ \nabcdefg /*****/ abc /**//**//****/";
+        let new_text = DtsParser::remove_c_style_comments(text.as_bytes());
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!(" \nabcdefg  abc ", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_cpp_style_comments_0() {
+        let text = "abcdefg // abcdefg \n abcdefg";
+        let new_text = DtsParser::remove_cpp_style_comments(text.as_bytes());
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!("abcdefg  abcdefg", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_cpp_style_comments_1() {
+        let text = "abcdefg // abcdefg \n// abcdefg \n\nabcdefg";
+        let new_text = DtsParser::remove_cpp_style_comments(text.as_bytes());
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!("abcdefg \nabcdefg", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_cpp_style_comments_2() {
+        let text = "// abcdefg \n// abcdefg \n\nabcdefg\n//\n// abcdefg\n//";
+        let new_text = DtsParser::remove_cpp_style_comments(text.as_bytes());
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!("\nabcdefg\n", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_remove_comments_0() {
+        let text = "abcdefg // abcdefg \n/*xxxxx*/////\nabc/**/\n";
+        let new_text = DtsParser::remove_c_style_comments(text.as_bytes());
+        let new_text = DtsParser::remove_cpp_style_comments(&new_text);
+        let new_text = String::from_utf8_lossy(&new_text).to_string();
+        assert_eq!("abcdefg abc\n", &new_text);
     }
 }
