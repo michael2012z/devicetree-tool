@@ -8,76 +8,210 @@ pub struct Dts {}
 pub struct DtsParser {}
 
 impl DtsParser {
-    // Handle compiler instructions;
     // Remove comments;
+    // Handle compiler instructions;
     // Remove DTS header.
     fn parse(dts: &[u8]) {
-        // TODO: Compiler instructions
-
+        // Remove comments
         let dts = &DtsParser::remove_c_style_comments(dts);
         let dts = &DtsParser::remove_cpp_style_comments(dts);
 
-        // The first item must be the DTS version
-        let mut word: Vec<u8> = vec![];
-        let mut dts_version: Option<String> = None;
-        let mut root: Option<Node> = None;
-        let mut block_level = 0;
-        let mut i = 0;
-        let mut block_start = 0;
-        let mut block_end = 0;
+        // TODO: Compiler instructions
 
+        // The remaining content should be root node(s)
+        let mut i: usize = 0;
+        let mut text: Vec<u8> = vec![];
         while i < dts.len() {
             match dts[i] as char {
-                ';' => {
-                    if block_level == 0 {
-                        if dts_version.is_none() {
-                            // The first identified item must be DTS version: "/dts-v1/"
-                            let _dts_version = String::from_utf8_lossy(&word).to_string();
-                            let _dts_version = String::from(_dts_version.trim());
-                            println!("dts version: {}", _dts_version);
-                            dts_version = Some(_dts_version);
-                            // TODO: Panic if it is not "/dts-v1/"
-                        } else {
-                            if root.is_none() {
-                                // It must be a node
-                                let node_name = String::from_utf8_lossy(&word).to_string();
-                                let node_name = String::from(node_name.trim());
-                                println!("root node: {}", node_name);
-                                root = Some(DtsParser::parse_node(
-                                    node_name,
-                                    &dts[(block_start + 1)..block_end],
-                                ));
-                            } else {
-                                panic!("multiple root nodes");
-                            }
-                        }
-                        word.clear();
-                    }
-                }
                 '{' => {
-                    if block_level == 0 {
-                        block_start = i;
-                    }
-                    block_level = block_level + 1;
+                    // Found node
+                    println!(
+                        "found node {}",
+                        String::from_utf8_lossy(&text).to_string().trim()
+                    );
+                    i = i + 1;
+                    let node_size = DtsParser::parse_node(&dts[i..]);
+                    i = i + node_size;
+                    text.clear();
+                }
+                _ => {
+                    text.push(dts[i]);
+                    i = i + 1;
+                }
+            }
+        }
+    }
+
+    fn parse_node(dts: &[u8]) -> usize {
+        let mut i: usize = 0;
+        let mut text: Vec<u8> = vec![];
+        let mut at_end = false;
+        while i < dts.len() {
+            match dts[i] as char {
+                '{' => {
+                    // Found node
+                    println!(
+                        "found node {}",
+                        String::from_utf8_lossy(&text).to_string().trim()
+                    );
+                    i = i + 1;
+                    let node_size = DtsParser::parse_node(&dts[i..]);
+                    i = i + node_size;
+                    text.clear();
                 }
                 '}' => {
-                    block_level = block_level - 1;
-                    if block_level == 0 {
-                        block_end = i;
+                    // Come to the end of current node, expecting a ';' to finish
+                    at_end = true;
+                    i = i + 1;
+                }
+                '=' => {
+                    // Found an attribute with value
+                    let attribute_key = String::from_utf8_lossy(&text).to_string();
+                    println!("found attribute {} with value:", attribute_key.trim());
+                    i = i + 1;
+                    let attribute_value_size = DtsParser::parse_attribute_value(&dts[i..]);
+                    i = i + attribute_value_size;
+                    text.clear();
+                }
+                ';' => {
+                    // We found either:
+                    //  - An attribute without value
+                    //  - Or the end of the node
+                    i = i + 1;
+                    if at_end {
+                        return i;
+                    } else {
+                        println!(
+                            "found attribute {} without value",
+                            String::from_utf8_lossy(&text).to_string().trim()
+                        );
+                        text.clear();
                     }
                 }
                 _ => {
-                    if block_level == 0 {
-                        word.push(dts[i]);
+                    text.push(dts[i]);
+                    i = i + 1;
+                }
+            }
+        }
+        panic!("attribute not ended");
+    }
+
+    fn parse_attribute_value(dts: &[u8]) -> usize {
+        let mut value: Vec<u8> = vec![];
+        let mut i: usize = 0;
+        let mut text: Vec<u8> = vec![];
+
+        // 3 types of value (piece) are possible:
+        //  - 1. Cell (<...>)
+        //  - 2. Byte sequence ([...])
+        //  - 3. String ("...")
+        let mut value_type = 0; // 0 for undetermined
+
+        while i < dts.len() {
+            match dts[i] as char {
+                '<' => {
+                    // Cell type
+                    if value_type != 0 {
+                        panic!("found cell-start while parsing another attribute type {value_type}")
                     }
+                    value_type = 1;
+                    text.clear();
+                }
+                '>' => {
+                    if value_type != 1 {
+                        panic!("found cell-end while parsing another attribute type {value_type}")
+                    }
+                    value_type = 0;
+
+                    DtsParser::parse_attribute_value_cells(&text);
+                    text.clear();
+                }
+                '[' => {
+                    // Bytes type
+                    if value_type != 0 {
+                        panic!(
+                            "found bytes-start while parsing another attribute type {value_type}"
+                        )
+                    }
+                    value_type = 2;
+                    text.clear();
+                }
+                ']' => {
+                    if value_type != 2 {
+                        panic!("found bytes-end while parsing another attribute type {value_type}")
+                    }
+                    value_type = 0;
+
+                    DtsParser::parse_attribute_value_bytes(&text);
+                    text.clear();
+                }
+                '"' => {
+                    // Bytes type
+                    if value_type == 0 {
+                        // At the start of a string
+                        value_type = 3;
+                        text.clear();
+                    } else if value_type == 3 {
+                        // At the end of a string
+                        value_type = 0;
+                        DtsParser::parse_attribute_value_string(&text);
+                        text.clear();
+                    } else {
+                        panic!("found string while parsing another attribute type {value_type}")
+                    }
+                }
+                '\\' => {
+                    // Met an escape char, push the esc char and the next char to buffer
+                    text.push(dts[i]);
+                    i = i + 1;
+                    text.push(dts[i]);
+                }
+                ';' => {
+                    // conclude the attribute
+                    return i + 1;
+                }
+                _ => {
+                    text.push(dts[i]);
                 }
             }
             i = i + 1;
         }
-        let tail = String::from_utf8_lossy(&word).to_string();
-        if tail.trim().len() != 0 {
-            panic!("Format error: unfinished content: {}", tail);
+        panic!("attribute not ended");
+    }
+
+    fn parse_attribute_value_cells(text: &[u8]) {
+        println!("cells: {}", String::from_utf8_lossy(text));
+        println!("cells:");
+        for num in String::from_utf8_lossy(text).split_whitespace() {
+            let n = if num.starts_with("0x") {
+                u32::from_str_radix(&num[2..], 16).unwrap()
+            } else {
+                u32::from_str_radix(&num[2..], 10).unwrap()
+            };
+            println!("{:x}", n);
         }
+    }
+
+    fn parse_attribute_value_bytes(text: &[u8]) {
+        println!("bytes: {}", String::from_utf8_lossy(text));
+        println!("bytes:");
+        for num in String::from_utf8_lossy(text).split_whitespace() {
+            let n = if num.starts_with("0x") {
+                u8::from_str_radix(&num[2..], 16).unwrap()
+            } else {
+                u8::from_str_radix(&num[2..], 10).unwrap()
+            };
+            println!("{:x}", n);
+        }
+    }
+
+    fn parse_attribute_value_string(text: &[u8]) {
+        println!("string: {}", String::from_utf8_lossy(text));
+    }
+
+    fn handle_directives(text: &[u8]) -> Vec<u8> {
+        vec![]
     }
 
     // Return the space of a C-style comment: (start location, size)
@@ -166,111 +300,6 @@ impl DtsParser {
             }
         }
         new_dts
-    }
-
-    fn parse_node(name: String, dts: &[u8]) -> Node {
-        let mut word: Vec<u8> = vec![];
-        let mut node = Node::new(&name);
-        let mut block_level = 0;
-        let mut i = 0;
-        let mut block_start = 0;
-        let mut block_end = 0;
-        let mut is_block = false;
-
-        while i < dts.len() {
-            match dts[i] as char {
-                ';' => {
-                    if block_level == 0 {
-                        if is_block {
-                            let node_name = String::from_utf8_lossy(&word).to_string();
-                            let node_name = String::from(node_name.trim());
-                            println!("sub_node: {}", node_name);
-                            let sub_node = DtsParser::parse_node(
-                                node_name,
-                                &dts[(block_start + 1)..block_end],
-                            );
-                            node.add_sub_node(sub_node);
-                        } else {
-                            let attr = DtsParser::parse_attribute(&word);
-                            node.add_attr(attr);
-                        }
-                        word.clear();
-                    }
-                }
-                '{' => {
-                    if block_level == 0 {
-                        block_start = i;
-                        is_block = true;
-                    }
-                    block_level = block_level + 1;
-                }
-                '}' => {
-                    block_level = block_level - 1;
-                    if block_level == 0 {
-                        block_end = i;
-                    }
-                }
-                _ => {
-                    if block_level == 0 {
-                        word.push(dts[i]);
-                    }
-                }
-            }
-            i = i + 1;
-        }
-        let tail = String::from_utf8_lossy(&word).to_string();
-        if tail.trim().len() != 0 {
-            panic!("Format error: unfinished content: {}", tail);
-        }
-
-        node
-    }
-
-    fn parse_attribute(dts: &[u8]) -> Attribute {
-        let text = String::from_utf8_lossy(&dts).to_string();
-        let text = String::from(text.trim());
-        if let Some(eq) = text.find("=") {
-            let key = text[0..(eq - 1)].trim();
-            let value = text[(eq + 1)..].trim();
-
-            let value_bytes = value.as_bytes();
-            if value_bytes.len() < 2 {
-                panic!("Attribute value format error: {value}")
-            }
-
-            let first_char = value_bytes[0] as char;
-            let last_char = value_bytes[value_bytes.len() - 1] as char;
-
-            if first_char == '"' && last_char == '"' {
-                let mut strings: Vec<String> = vec![];
-                let sp = value.split("\"");
-
-                for (i, s) in sp.enumerate() {
-                    if i % 2 == 1 {
-                        println!("{s}");
-                        strings.push(String::from(s));
-                    }
-                }
-                Attribute::new_strings(key, strings)
-            } else if first_char == '<' && last_char == '>' {
-                println!(
-                    "attribute: key: {key}, value data: {}",
-                    &value[1..(value_bytes.len() - 1)]
-                );
-                let mut u32s: Vec<u32> = vec![];
-                for d in value[1..(value_bytes.len() - 1)].split_whitespace() {
-                    let u = parse_int::parse::<u32>(d).unwrap();
-                    u32s.push(u);
-                    println!("{u}");
-                }
-                Attribute::new_u32s(key, u32s)
-            } else {
-                panic!("Attribute value format error: {value}")
-            }
-        } else {
-            println!("attribute: key: {}", text);
-            Attribute::new_empty(&text)
-        }
     }
 }
 
