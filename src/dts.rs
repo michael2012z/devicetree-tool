@@ -1,7 +1,7 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::{attribute::Attribute, node::Node};
+use crate::{attribute::Attribute, node::Node, tree::Tree};
 
 pub struct Dts {}
 
@@ -11,13 +11,14 @@ impl DtsParser {
     // Remove comments;
     // Handle compiler instructions;
     // Remove DTS header.
-    fn parse(dts: &[u8]) {
+    fn parse(dts: &[u8]) -> Tree {
         // Remove comments
         let dts = &DtsParser::remove_c_style_comments(dts);
         let dts = &DtsParser::remove_cpp_style_comments(dts);
 
         // TODO: Compiler instructions
 
+        let mut root_node = Node::new("/");
         // The remaining content should be root node(s)
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -25,12 +26,13 @@ impl DtsParser {
             match dts[i] as char {
                 '{' => {
                     // Found node
-                    println!(
-                        "found node {}",
-                        String::from_utf8_lossy(&text).to_string().trim()
-                    );
+                    let node_name =
+                        &String::from(String::from_utf8_lossy(&text).to_string().trim());
+                    // TODO: the node_name must be "/", fail otherwise
+                    println!("found node {}", node_name);
                     i = i + 1;
-                    let node_size = DtsParser::parse_node(&dts[i..]);
+                    // Update the root node content
+                    let node_size = DtsParser::parse_node(&dts[i..], &mut root_node);
                     i = i + node_size;
                     text.clear();
                 }
@@ -40,9 +42,10 @@ impl DtsParser {
                 }
             }
         }
+        Tree::new(root_node)
     }
 
-    fn parse_node(dts: &[u8]) -> usize {
+    fn parse_node(dts: &[u8], node: &mut Node) -> usize {
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         let mut at_end = false;
@@ -50,12 +53,13 @@ impl DtsParser {
             match dts[i] as char {
                 '{' => {
                     // Found node
-                    println!(
-                        "found node {}",
-                        String::from_utf8_lossy(&text).to_string().trim()
-                    );
+                    let sub_node_name =
+                        &String::from(String::from_utf8_lossy(&text).to_string().trim());
+                    let mut sub_node = Node::new(sub_node_name);
+                    println!("found node {}", sub_node_name);
                     i = i + 1;
-                    let node_size = DtsParser::parse_node(&dts[i..]);
+                    let node_size = DtsParser::parse_node(&dts[i..], &mut sub_node);
+                    node.add_sub_node(sub_node);
                     i = i + node_size;
                     text.clear();
                 }
@@ -66,10 +70,14 @@ impl DtsParser {
                 }
                 '=' => {
                     // Found an attribute with value
-                    let attribute_key = String::from_utf8_lossy(&text).to_string();
-                    println!("found attribute {} with value:", attribute_key.trim());
+                    let attr_name =
+                        &String::from(String::from_utf8_lossy(&text).to_string().trim());
+                    println!("found attribute {} with value:", attr_name);
                     i = i + 1;
-                    let attribute_value_size = DtsParser::parse_attribute_value(&dts[i..]);
+                    let (attribute_value_size, attribute_value) =
+                        DtsParser::parse_attribute_value(&dts[i..]);
+                    let attr = Attribute::new_u8s(attr_name, attribute_value);
+                    node.add_attr(attr);
                     i = i + attribute_value_size;
                     text.clear();
                 }
@@ -81,11 +89,13 @@ impl DtsParser {
                     if at_end {
                         return i;
                     } else {
-                        println!(
-                            "found attribute {} without value",
-                            String::from_utf8_lossy(&text).to_string().trim()
-                        );
+                        // An attribute without value
+                        let attr_name =
+                            &String::from(String::from_utf8_lossy(&text).to_string().trim());
+                        println!("found attribute {} without value", attr_name);
                         text.clear();
+                        let attr = Attribute::new_empty(attr_name);
+                        node.add_attr(attr);
                     }
                 }
                 _ => {
@@ -97,7 +107,7 @@ impl DtsParser {
         panic!("attribute not ended");
     }
 
-    fn parse_attribute_value(dts: &[u8]) -> usize {
+    fn parse_attribute_value(dts: &[u8]) -> (usize, Vec<u8>) {
         let mut value: Vec<u8> = vec![];
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -124,7 +134,10 @@ impl DtsParser {
                     }
                     value_type = 0;
 
-                    DtsParser::parse_attribute_value_cells(&text);
+                    let cells_value = DtsParser::parse_attribute_value_cells(&text);
+                    for d in cells_value {
+                        value.push(d)
+                    }
                     text.clear();
                 }
                 '[' => {
@@ -143,7 +156,10 @@ impl DtsParser {
                     }
                     value_type = 0;
 
-                    DtsParser::parse_attribute_value_bytes(&text);
+                    let bytes_value = DtsParser::parse_attribute_value_bytes(&text);
+                    for d in bytes_value {
+                        value.push(d)
+                    }
                     text.clear();
                 }
                 '"' => {
@@ -155,7 +171,10 @@ impl DtsParser {
                     } else if value_type == 3 {
                         // At the end of a string
                         value_type = 0;
-                        DtsParser::parse_attribute_value_string(&text);
+                        let string_value = DtsParser::parse_attribute_value_string(&text);
+                        for d in string_value {
+                            value.push(d)
+                        }
                         text.clear();
                     } else {
                         panic!("found string while parsing another attribute type {value_type}")
@@ -168,8 +187,9 @@ impl DtsParser {
                     text.push(dts[i]);
                 }
                 ';' => {
-                    // conclude the attribute
-                    return i + 1;
+                    // Conclude the attribute
+                    // This is the only exit of the function
+                    return (i + 1, value);
                 }
                 _ => {
                     text.push(dts[i]);
@@ -180,7 +200,8 @@ impl DtsParser {
         panic!("attribute not ended");
     }
 
-    fn parse_attribute_value_cells(text: &[u8]) {
+    fn parse_attribute_value_cells(text: &[u8]) -> Vec<u8> {
+        let mut value: Vec<u8> = vec![];
         println!("cells: {}", String::from_utf8_lossy(text));
         println!("cells:");
         for num in String::from_utf8_lossy(text).split_whitespace() {
@@ -189,11 +210,17 @@ impl DtsParser {
             } else {
                 u32::from_str_radix(&num[2..], 10).unwrap()
             };
+            let n_u8_vec = n.to_be_bytes().to_vec();
+            for n in n_u8_vec {
+                value.push(n);
+            }
             println!("{:x}", n);
         }
+        value
     }
 
-    fn parse_attribute_value_bytes(text: &[u8]) {
+    fn parse_attribute_value_bytes(text: &[u8]) -> Vec<u8> {
+        let mut value: Vec<u8> = vec![];
         println!("bytes: {}", String::from_utf8_lossy(text));
         println!("bytes:");
         for num in String::from_utf8_lossy(text).split_whitespace() {
@@ -202,12 +229,15 @@ impl DtsParser {
             } else {
                 u8::from_str_radix(&num[2..], 10).unwrap()
             };
+            value.push(n);
             println!("{:x}", n);
         }
+        value
     }
 
-    fn parse_attribute_value_string(text: &[u8]) {
+    fn parse_attribute_value_string(text: &[u8]) -> Vec<u8> {
         println!("string: {}", String::from_utf8_lossy(text));
+        text.to_vec()
     }
 
     fn handle_directives(text: &[u8]) -> Vec<u8> {
