@@ -83,19 +83,24 @@ impl DtsParser {
                 }
                 ';' => {
                     // We found either:
-                    //  - An attribute without value
+                    //  - An attribute without value or a compiler directive
                     //  - Or the end of the node
                     i = i + 1;
                     if at_end {
                         return i;
                     } else {
-                        // An attribute without value
+                        // An attribute without value or a comipler directive
                         let attr_name =
-                            &String::from(String::from_utf8_lossy(&text).to_string().trim());
-                        println!("found attribute {} without value", attr_name);
+                            String::from(String::from_utf8_lossy(&text).to_string().trim());
                         text.clear();
-                        let attr = Attribute::new_empty(attr_name);
-                        node.add_attr(attr);
+                        if attr_name.starts_with("/") {
+                            // A compiler directive
+                            DtsParser::handle_directive(&attr_name);
+                        } else {
+                            println!("found attribute {} without value", attr_name);
+                            let attr = Attribute::new_empty(&attr_name);
+                            node.add_attr(attr);
+                        }
                     }
                 }
                 _ => {
@@ -240,8 +245,19 @@ impl DtsParser {
         text.to_vec()
     }
 
-    fn handle_directives(text: &[u8]) -> Vec<u8> {
-        vec![]
+    fn handle_directive(directive: &str) {
+        println!("handle directive: {directive}");
+        let mut slices = directive.split_ascii_whitespace();
+        let instruction = slices.next().unwrap();
+        if instruction == "/delete-node/" {
+            let node_path = slices.next().unwrap();
+            println!("delete node: {node_path}");
+        } else if instruction == "/delete-property/" {
+            let property_path = slices.next().unwrap();
+            println!("delete property: {property_path}");
+        } else {
+            panic!("unknown comipler directive {directive}")
+        }
     }
 
     // Return the space of a C-style comment: (start location, size)
