@@ -9,7 +9,7 @@ impl DtsParser {
     // Remove comments;
     // Handle compiler instructions;
     // Remove DTS header.
-    fn parse(dts: &[u8]) -> Tree {
+    pub fn parse(dts: &[u8]) -> Tree {
         // Remove comments
         let dts = &DtsParser::remove_c_style_comments(dts);
         let dts = &DtsParser::remove_cpp_style_comments(dts);

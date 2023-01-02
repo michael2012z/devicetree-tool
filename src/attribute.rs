@@ -1,8 +1,6 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::utils::Utils;
-
 pub struct Attribute {
     pub name: String,
     pub value: Vec<u8>,
