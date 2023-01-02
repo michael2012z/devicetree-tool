@@ -6,6 +6,7 @@ pub mod dtb;
 mod dtb_generator;
 mod dtb_parser;
 pub mod dts;
+mod dts_generator;
 mod dts_parser;
 pub mod node;
 pub mod tree;
