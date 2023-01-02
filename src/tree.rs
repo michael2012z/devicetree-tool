@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::dtb_parser::DtbParser;
+use crate::dts_generator::DtsGenerator;
 use crate::dts_parser::DtsParser;
 use crate::node::Node;
 use std::rc::Rc;
@@ -23,5 +24,12 @@ impl Tree {
 
     pub fn from_dtb_bytes(dtb: &[u8]) -> Self {
         DtbParser::from_bytes(&dtb).parse()
+    }
+}
+
+impl std::fmt::Display for Tree {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = DtsGenerator::generate_tree(self);
+        writeln!(f, "{s}")
     }
 }

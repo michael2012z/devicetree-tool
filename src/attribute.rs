@@ -1,6 +1,8 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use crate::dts_generator::DtsGenerator;
+
 pub struct Attribute {
     pub name: String,
     pub value: Vec<u8>,
@@ -59,5 +61,12 @@ impl Attribute {
             name: String::from(name),
             value: bytes,
         }
+    }
+}
+
+impl std::fmt::Display for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = DtsGenerator::generate_attribute(self, 0);
+        writeln!(f, "{s}")
     }
 }
