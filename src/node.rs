@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::attribute::Attribute;
+use crate::dts_generator::DtsGenerator;
 use std::rc::Rc;
 
 pub struct Node {
@@ -25,5 +26,12 @@ impl Node {
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
         self.sub_nodes.push(Rc::new(sub_node));
+    }
+}
+
+impl std::fmt::Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = DtsGenerator::generate_node(self, 0);
+        writeln!(f, "{s}")
     }
 }
