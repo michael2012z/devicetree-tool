@@ -351,6 +351,7 @@ impl DtsParser {
 mod tests {
     use super::*;
     use crate::attribute::Attribute;
+    use crate::dts_generator::DtsGenerator;
     use crate::node::Node;
     use crate::tree::Tree;
 
@@ -370,7 +371,7 @@ mod tests {
         root.add_attr(Attribute::new_u32("#size-cells", 2u32));
         root.add_attr(Attribute::new_u32("interrupt-parent", 1u32));
         let dt = Tree::new(root);
-        let dts = dt.to_dts(0);
+        let dts = DtsGenerator::generate_tree(&dt);
         assert_eq!(dts_0_text, dts);
     }
 
@@ -390,7 +391,7 @@ mod tests {
         memory.add_attr(Attribute::new_u32s("reg", reg));
         root.add_sub_node(memory);
         let dt = Tree::new(root);
-        let dts = dt.to_dts(0);
+        let dts = DtsGenerator::generate_tree(&dt);
         assert_eq!(dts_1_text, dts);
     }
 
@@ -443,7 +444,7 @@ mod tests {
         root.add_sub_node(cpus);
 
         let dt = Tree::new(root);
-        let dts = dt.to_dts(0);
+        let dts = DtsGenerator::generate_tree(&dt);
         println!("{dts}");
         assert_eq!(dts_2_text, dts);
     }
@@ -508,7 +509,7 @@ mod tests {
         root.add_sub_node(pci);
 
         let dt = Tree::new(root);
-        let dts = dt.to_dts(0);
+        let dts = DtsGenerator::generate_tree(&dt);
         println!("{dts}");
         assert_eq!(dts_3_text, dts);
     }

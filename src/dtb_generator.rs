@@ -190,6 +190,7 @@ impl DtbGenerator {
 mod tests {
     use super::*;
     use crate::dtb_parser::DtbParser;
+    use crate::dts_generator::DtsGenerator;
     use std::fs::File;
     use std::io::prelude::*;
 
@@ -207,7 +208,7 @@ mod tests {
         let dtb_bytes = dtb_generator.generate();
 
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
-        let s = tree.to_dts(0);
+        let s = DtsGenerator::generate_tree(&tree);
         println!("{}\n{}", s.len(), s);
         assert_eq!(tree.root.name, "");
         assert_eq!(tree.root.attributes[0].name, "compatible");
@@ -226,7 +227,7 @@ mod tests {
         root.add_attr(Attribute::new_u32("#size-cells", 2u32));
         root.add_attr(Attribute::new_u32("interrupt-parent", 1u32));
         let tree = Tree::new(root);
-        let s = tree.to_dts(0);
+        let s = DtsGenerator::generate_tree(&tree);
         println!("{}\n{}", s.len(), s);
         assert_eq!(tree.root.attributes[0].name, "compatible");
         assert_eq!(tree.root.attributes[0].value.len(), 17);
@@ -256,7 +257,7 @@ mod tests {
         f.read_to_end(&mut buffer).unwrap();
 
         let tree = DtbParser::from_bytes(&buffer).parse();
-        let tree_string = tree.to_dts(0);
+        let tree_string = DtsGenerator::generate_tree(&tree);
         println!("{}\n{}", tree_string.len(), tree_string);
 
         // find the number of "="
@@ -301,7 +302,7 @@ mod tests {
 
         // parse the generated DTB
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
-        let tree_string = tree.to_dts(0);
+        let tree_string = DtsGenerator::generate_tree(&tree);
         println!("{}\n{}", tree_string.len(), tree_string);
 
         // find the number of "="
