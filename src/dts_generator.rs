@@ -59,19 +59,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_attribute_none() {
+    fn test_dts_generate_attribute_none() {
         let attr = Attribute::new_empty("name");
         println!("{}", DtsGenerator::generate_attribute(&attr, 0));
     }
 
     #[test]
-    fn test_attribute_u32() {
+    fn test_dts_generate_attribute_u32() {
         let attr = Attribute::new_u32("name", 42);
         println!("{}", DtsGenerator::generate_attribute(&attr, 0));
     }
 
     #[test]
-    fn test_attribute_strs() {
+    fn test_dts_generate_attribute_strs() {
         let string1 = String::from("&str abc");
         let string2 = String::from("def");
         let strs = vec![string1, string2];
@@ -80,14 +80,14 @@ mod tests {
     }
 
     #[test]
-    fn test_attribute_str() {
+    fn test_dts_generate_attribute_str() {
         let s = String::from("&str abc");
         let attr = Attribute::new_string("name", s);
         println!("{}", DtsGenerator::generate_attribute(&attr, 0));
     }
 
     #[test]
-    fn test_attribute_bytes() {
+    fn test_dts_generate_attribute_bytes() {
         let bytes = vec![0u8, 1u8, 2u8, 3u8];
         let attr = Attribute::new_u8s("name", bytes);
         println!("{}", DtsGenerator::generate_attribute(&attr, 0));
