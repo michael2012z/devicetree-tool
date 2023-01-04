@@ -33,3 +33,24 @@ impl std::fmt::Display for Tree {
         writeln!(f, "{s}")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::attribute::Attribute;
+    use crate::node::Node;
+
+    #[test]
+    fn test_tree_print() {
+        let mut node = Node::new("/");
+        node.add_attr(Attribute::new_u32("attr", 42));
+        node.add_sub_node(Node::new("sub_node"));
+        let tree = Tree::new(node);
+
+        let printing = format!("{}", tree);
+        assert_eq!(
+            &printing,
+            "/dts-v1/;\n\n/ {\n\tattr = <0x0 0x0 0x0 0x2a>;\n\n\tsub_node {\n\t};\n};\n\n"
+        );
+    }
+}

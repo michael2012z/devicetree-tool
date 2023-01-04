@@ -46,7 +46,7 @@ impl DtsGenerator {
     }
 
     pub fn generate_tree(tree: &Tree) -> String {
-        let mut dts = String::from("/dts-v1/;\n\n/ ");
+        let mut dts = String::from("/dts-v1/;\n\n");
         let root_dts = DtsGenerator::generate_node(&tree.root, 0);
         dts.push_str(&root_dts);
         dts.push_str("\n");
