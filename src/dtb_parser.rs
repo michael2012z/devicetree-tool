@@ -5,8 +5,8 @@ use crate::attribute::Attribute;
 use crate::dtb::{DtbHeader, ReserveEntry};
 use crate::node::Node;
 use crate::tree::Tree;
-use std::rc::Rc;
 
+#[allow(dead_code)]
 pub struct DtbParser {
     header: DtbHeader,
     reserve_entries: Vec<ReserveEntry>,
@@ -202,6 +202,7 @@ impl DtbParser {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::fs::File;

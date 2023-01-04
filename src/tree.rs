@@ -1,6 +1,7 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use crate::dtb_generator::DtbGenerator;
 use crate::dtb_parser::DtbParser;
 use crate::dts_generator::DtsGenerator;
 use crate::dts_parser::DtsParser;
@@ -22,8 +23,15 @@ impl Tree {
         DtsParser::parse(&dts)
     }
 
+    pub fn generate_dts(&self) -> String {
+        DtsGenerator::generate_tree(self)
+    }
     pub fn from_dtb_bytes(dtb: &[u8]) -> Self {
         DtbParser::from_bytes(&dtb).parse()
+    }
+
+    pub fn generate_dtb(&self) -> Vec<u8> {
+        DtbGenerator::from_tree(self.root.clone()).generate()
     }
 }
 

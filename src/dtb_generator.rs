@@ -4,19 +4,19 @@
 use crate::attribute::Attribute;
 use crate::dtb::{DtbHeader, ReserveEntry};
 use crate::node::Node;
-use crate::tree::Tree;
 use std::rc::Rc;
 
+#[allow(dead_code)]
 pub struct DtbGenerator {
     header: DtbHeader,
     reserve_entries: Vec<ReserveEntry>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
-    tree: Tree,
+    root_node: Rc<Node>,
 }
 
 impl DtbGenerator {
-    pub fn from_tree(tree: Tree) -> DtbGenerator {
+    pub fn from_tree(root_node: Rc<Node>) -> DtbGenerator {
         let header = DtbHeader {
             magic: 0u32,
             total_size: 0u32,
@@ -37,7 +37,7 @@ impl DtbGenerator {
             reserve_entries,
             strings_block,
             structure_block,
-            tree,
+            root_node,
         }
     }
 
@@ -139,7 +139,7 @@ impl DtbGenerator {
     }
 
     fn generate_structure_block(&mut self) -> Vec<u8> {
-        let root = &self.tree.root.clone();
+        let root = &self.root_node.clone();
         let mut token = 9u32.to_be_bytes().to_vec();
 
         let mut bytes = self.generate_node(root);
@@ -191,6 +191,7 @@ mod tests {
     use super::*;
     use crate::dtb_parser::DtbParser;
     use crate::dts_generator::DtsGenerator;
+    use crate::tree::Tree;
     use std::fs::File;
     use std::io::prelude::*;
 
@@ -204,7 +205,7 @@ mod tests {
         ));
         let tree = Tree::new(root);
 
-        let mut dtb_generator = DtbGenerator::from_tree(tree);
+        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone());
         let dtb_bytes = dtb_generator.generate();
 
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
@@ -297,7 +298,7 @@ mod tests {
 
         let tree = DtbParser::from_bytes(&buffer).parse();
 
-        let mut dtb_generator = DtbGenerator::from_tree(tree);
+        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone());
         let dtb_bytes = dtb_generator.generate();
 
         // parse the generated DTB
