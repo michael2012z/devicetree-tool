@@ -1,7 +1,7 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::{attribute::Attribute, node::Node, tree::Tree, utils::Utils};
+use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree, utils::Utils};
 
 pub struct DtsGenerator {}
 
@@ -44,6 +44,13 @@ impl DtsGenerator {
         }
         s.push_str(&format!("{indents}}};"));
         s
+    }
+
+    pub fn generate_reservation(reservation: &Reservation, _indent_level: u32) -> String {
+        String::from(format!(
+            "/reservation/ {:#018x} {:#018x};",
+            reservation.address, reservation.length
+        ))
     }
 
     pub fn generate_tree(tree: &Tree) -> String {
