@@ -126,7 +126,7 @@ impl DtbParser {
             panic!("Root node is not found")
         }
 
-        Tree::new(root_node)
+        Tree::new(vec![], root_node)
     }
 
     // struct_block starts immediately after the FDT_BEGIN_NODE token,

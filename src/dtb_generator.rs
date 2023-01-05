@@ -203,7 +203,7 @@ mod tests {
             "compatible",
             vec![String::from("linux,dummy-virt")],
         ));
-        let tree = Tree::new(root);
+        let tree = Tree::new(vec![], root);
 
         // Generate the DTB
         let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone());
@@ -231,7 +231,7 @@ mod tests {
         root.add_attr(Attribute::new_u32("interrupt-parent", 1u32));
 
         // Check the tree structure
-        let tree = Tree::new(root);
+        let tree = Tree::new(vec![], root);
         assert_eq!(tree.root.attributes[0].name, "compatible");
         assert_eq!(tree.root.attributes[0].value.len(), 17);
         assert_eq!(tree.root.attributes[1].name, "#address-cells");

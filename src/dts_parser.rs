@@ -1,7 +1,9 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::{attribute::Attribute, node::Node, tree::Tree};
+use std::rc::Rc;
+
+use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree};
 
 pub struct DtsParser {}
 
@@ -17,11 +19,44 @@ impl DtsParser {
         // TODO: Compiler instructions
 
         let mut root_node = Node::new("/");
+        let mut reservations: Vec<Rc<Reservation>> = vec![];
         // The remaining content should be root node(s)
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         while i < dts.len() {
             match dts[i] as char {
+                ';' => {
+                    // On the top level of a DTS, the semicolon may conclude one of: "/dts-v1/" or "/reservation/"
+                    let statement =
+                        &String::from(String::from_utf8_lossy(&text).to_string().trim());
+                    i = i + 1;
+                    text.clear();
+                    if statement == "/dts-v1/" {
+                        println!("detected /dts-v1/;");
+                    } else if statement.starts_with("/reservation/") {
+                        let mut reservation = statement.split_ascii_whitespace();
+                        let _ = reservation.next().unwrap();
+                        let address = reservation.next().unwrap();
+                        let address = if address.starts_with("0x") {
+                            u64::from_str_radix(&address[2..], 16).unwrap()
+                        } else {
+                            u64::from_str_radix(address, 10).unwrap()
+                        };
+                        let length = reservation.next().unwrap();
+                        let length = if length.starts_with("0x") {
+                            u64::from_str_radix(&length[2..], 16).unwrap()
+                        } else {
+                            u64::from_str_radix(length, 10).unwrap()
+                        };
+                        println!(
+                            "detected /reservation/: address = {:#018x}, length = {:#018x}",
+                            address, length
+                        );
+                        reservations.push(Rc::new(Reservation::new(address, length)));
+                    } else {
+                        panic!("unknown top-level statement: {statement}");
+                    }
+                }
                 '{' => {
                     // Found node
                     let node_name =
@@ -40,7 +75,7 @@ impl DtsParser {
                 }
             }
         }
-        Tree::new(root_node)
+        Tree::new(reservations, root_node)
     }
 
     fn parse_node(dts: &[u8], node: &mut Node) -> usize {
@@ -211,7 +246,7 @@ impl DtsParser {
             let n = if num.starts_with("0x") {
                 u32::from_str_radix(&num[2..], 16).unwrap()
             } else {
-                u32::from_str_radix(&num[2..], 10).unwrap()
+                u32::from_str_radix(num, 10).unwrap()
             };
             let n_u8_vec = n.to_be_bytes().to_vec();
             for n in n_u8_vec {
@@ -230,7 +265,7 @@ impl DtsParser {
             let n = if num.starts_with("0x") {
                 u8::from_str_radix(&num[2..], 16).unwrap()
             } else {
-                u8::from_str_radix(&num[2..], 10).unwrap()
+                u8::from_str_radix(num, 10).unwrap()
             };
             value.push(n);
             println!("{:x}", n);
@@ -429,5 +464,17 @@ mod tests {
         let new_text = DtsParser::remove_cpp_style_comments(&new_text);
         let new_text = String::from_utf8_lossy(&new_text).to_string();
         assert_eq!("abcdefg abc\n", &new_text);
+    }
+
+    #[test]
+    fn test_dts_parse_reservation() {
+        // Read the DTS text from test data folder
+        let dts = std::fs::read("test/dts_4.dts").unwrap();
+        let tree = DtsParser::parse(&dts);
+        assert_eq!(tree.reservations.len(), 5);
+        assert_eq!(tree.reservations[0].address, 0x0);
+        assert_eq!(tree.reservations[0].length, 0x100000);
+        assert_eq!(tree.reservations[4].address, 0x400000);
+        assert_eq!(tree.reservations[4].length, 0x100000);
     }
 }
