@@ -219,7 +219,6 @@ mod tests {
 
         // parse the header
         let header = DtbParser::parse_header(&buffer[0..40]);
-        println!("header: \n{:#}", header);
         assert_eq!(0xd00dfeed, header.magic);
         assert_eq!(17, header.version);
         assert_eq!(16, header.last_comp_version);
