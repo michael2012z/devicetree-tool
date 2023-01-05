@@ -6,15 +6,18 @@ use crate::dtb_parser::DtbParser;
 use crate::dts_generator::DtsGenerator;
 use crate::dts_parser::DtsParser;
 use crate::node::Node;
+use crate::reservation::Reservation;
 use std::rc::Rc;
 
 pub struct Tree {
+    pub reservations: Vec<Rc<Reservation>>,
     pub root: Rc<Node>,
 }
 
 impl Tree {
-    pub fn new(root: Node) -> Self {
+    pub fn new(reservations: Vec<Rc<Reservation>>, root: Node) -> Self {
         Tree {
+            reservations,
             root: Rc::new(root),
         }
     }
@@ -53,7 +56,7 @@ mod tests {
         let mut node = Node::new("/");
         node.add_attr(Attribute::new_u32("attr", 42));
         node.add_sub_node(Node::new("sub_node"));
-        let tree = Tree::new(node);
+        let tree = Tree::new(vec![], node);
 
         let printing = format!("{}", tree);
         assert_eq!(

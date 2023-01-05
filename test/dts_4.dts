@@ -1,0 +1,16 @@
+/dts-v1/;
+
+/reservation/ 0x0 0x100000;
+/reservation/ 0x100000 0x100000;  /reservation/ 0x200000 0x100000; /reservation/ 0x300000 0x100000;
+
+/reservation/ 0x400000 0x100000;
+
+/ {
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x1 0x0>;
+	};
+};

@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_dts_generate_tree() {
         let root = Node::new("root");
-        let tree = Tree::new(root);
+        let tree = Tree::new(vec![], root);
         assert_eq!(
             DtsGenerator::generate_tree(&tree),
             "/dts-v1/;\n\nroot {\n};\n"
