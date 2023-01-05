@@ -9,5 +9,6 @@ pub mod dts;
 mod dts_generator;
 mod dts_parser;
 pub mod node;
+pub mod reservation;
 pub mod tree;
 mod utils;
