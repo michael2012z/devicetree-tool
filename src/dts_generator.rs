@@ -48,7 +48,7 @@ impl DtsGenerator {
 
     pub fn generate_reservation(reservation: &Reservation, _indent_level: u32) -> String {
         String::from(format!(
-            "/reservation/ {:#018x} {:#018x};",
+            "/memreserve/ {:#018x} {:#018x};",
             reservation.address, reservation.length
         ))
     }
@@ -154,7 +154,7 @@ mod tests {
         let reservation = Reservation::new(0x100000, 0x200000);
         assert_eq!(
             DtsGenerator::generate_reservation(&reservation, 0),
-            "/reservation/ 0x0000000000100000 0x0000000000200000;"
+            "/memreserve/ 0x0000000000100000 0x0000000000200000;"
         );
     }
 
@@ -175,7 +175,7 @@ mod tests {
         let tree = Tree::new(vec![Rc::new(reservation)], root);
         assert_eq!(
             DtsGenerator::generate_tree(&tree),
-            "/dts-v1/;\n\n/reservation/ 0x0000000000000000 0x0000000000100000;\n\nroot {\n};\n"
+            "/dts-v1/;\n\n/memreserve/ 0x0000000000000000 0x0000000000100000;\n\nroot {\n};\n"
         );
     }
 }

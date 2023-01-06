@@ -31,7 +31,7 @@ mod tests {
         let printing = format!("{}", reservation);
         assert_eq!(
             &printing,
-            "/reservation/ 0x0000000000000000 0x0000000000100000;"
+            "/memreserve/ 0x0000000000000000 0x0000000000100000;"
         );
     }
 }
