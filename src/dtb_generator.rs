@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 use crate::attribute::Attribute;
-use crate::dtb::{DtbHeader, ReserveEntry};
+use crate::dtb::DtbHeader;
 use crate::node::Node;
+use crate::reservation::Reservation;
 use std::rc::Rc;
 
 #[allow(dead_code)]
 pub struct DtbGenerator {
     header: DtbHeader,
-    reserve_entries: Vec<ReserveEntry>,
+    reserve_entries: Vec<Reservation>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
     root_node: Rc<Node>,
@@ -29,7 +30,7 @@ impl DtbGenerator {
             size_dt_strings: 0u32,
             size_dt_struct: 0u32,
         };
-        let reserve_entries: Vec<ReserveEntry> = vec![];
+        let reserve_entries: Vec<Reservation> = vec![];
         let strings_block: Vec<u8> = vec![];
         let structure_block: Vec<u8> = vec![];
         DtbGenerator {

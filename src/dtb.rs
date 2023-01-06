@@ -14,11 +14,6 @@ pub struct DtbHeader {
     pub size_dt_struct: u32,
 }
 
-pub struct ReserveEntry {
-    pub address: u64,
-    pub size: u64,
-}
-
 impl std::fmt::Display for DtbHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         writeln!(f, "magic: 0x{:x}", self.magic)?;

@@ -26,14 +26,14 @@ impl DtsParser {
         while i < dts.len() {
             match dts[i] as char {
                 ';' => {
-                    // On the top level of a DTS, the semicolon may conclude one of: "/dts-v1/" or "/reservation/"
+                    // On the top level of a DTS, the semicolon may conclude one of: "/dts-v1/" or "/memreserve/"
                     let statement =
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
                     i = i + 1;
                     text.clear();
                     if statement == "/dts-v1/" {
                         println!("detected /dts-v1/;");
-                    } else if statement.starts_with("/reservation/") {
+                    } else if statement.starts_with("/memreserve/") {
                         let mut reservation = statement.split_ascii_whitespace();
                         let _ = reservation.next().unwrap();
                         let address = reservation.next().unwrap();
@@ -49,7 +49,7 @@ impl DtsParser {
                             u64::from_str_radix(length, 10).unwrap()
                         };
                         println!(
-                            "detected /reservation/: address = {:#018x}, length = {:#018x}",
+                            "detected /memreserve/: address = {:#018x}, length = {:#018x}",
                             address, length
                         );
                         reservations.push(Rc::new(Reservation::new(address, length)));
