@@ -55,6 +55,14 @@ impl DtsGenerator {
 
     pub fn generate_tree(tree: &Tree) -> String {
         let mut dts = String::from("/dts-v1/;\n\n");
+        if tree.reservations.len() > 0 {
+            for reservation in &tree.reservations {
+                let reservation_dts = DtsGenerator::generate_reservation(&reservation, 0);
+                dts.push_str(&reservation_dts);
+                dts.push_str("\n");
+            }
+            dts.push_str("\n");
+        }
         let root_dts = DtsGenerator::generate_node(&tree.root, 0);
         dts.push_str(&root_dts);
         dts.push_str("\n");
@@ -65,6 +73,7 @@ impl DtsGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::rc::Rc;
 
     #[test]
     fn test_dts_generate_attribute_none() {
@@ -141,12 +150,32 @@ mod tests {
     }
 
     #[test]
-    fn test_dts_generate_tree() {
+    fn test_dts_generate_reservation() {
+        let reservation = Reservation::new(0x100000, 0x200000);
+        assert_eq!(
+            DtsGenerator::generate_reservation(&reservation, 0),
+            "/reservation/ 0x0000000000100000 0x0000000000200000;"
+        );
+    }
+
+    #[test]
+    fn test_dts_generate_tree_simple() {
         let root = Node::new("root");
         let tree = Tree::new(vec![], root);
         assert_eq!(
             DtsGenerator::generate_tree(&tree),
             "/dts-v1/;\n\nroot {\n};\n"
+        );
+    }
+
+    #[test]
+    fn test_dts_generate_tree_reservation() {
+        let root = Node::new("root");
+        let reservation = Reservation::new(0x0, 0x100000);
+        let tree = Tree::new(vec![Rc::new(reservation)], root);
+        assert_eq!(
+            DtsGenerator::generate_tree(&tree),
+            "/dts-v1/;\n\n/reservation/ 0x0000000000000000 0x0000000000100000;\n\nroot {\n};\n"
         );
     }
 }
