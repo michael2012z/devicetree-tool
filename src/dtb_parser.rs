@@ -1,15 +1,18 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use std::rc::Rc;
+
 use crate::attribute::Attribute;
-use crate::dtb::{DtbHeader, ReserveEntry};
+use crate::dtb::DtbHeader;
 use crate::node::Node;
+use crate::reservation::Reservation;
 use crate::tree::Tree;
 
 #[allow(dead_code)]
 pub struct DtbParser {
     header: DtbHeader,
-    reserve_entries: Vec<ReserveEntry>,
+    reserve_entries: Vec<Rc<Reservation>>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
 }
@@ -42,7 +45,12 @@ impl DtbParser {
     }
 
     pub fn parse(&self) -> Tree {
-        self.parse_structure_block(self.structure_block.as_ref())
+        let root_node = self.parse_structure_block(self.structure_block.as_ref());
+        let mut reservations = vec![];
+        for reservation in &self.reserve_entries {
+            reservations.push(reservation.clone());
+        }
+        Tree::new(reservations, root_node)
     }
 
     fn parse_header(header: &[u8]) -> DtbHeader {
@@ -85,7 +93,7 @@ impl DtbParser {
 
     // reservation_block may contain the bytes after the actual reservation block.
     // The real reservation block is zero-terminated.
-    fn parse_reservation_block(reservation_block: &[u8]) -> Vec<ReserveEntry> {
+    fn parse_reservation_block(reservation_block: &[u8]) -> Vec<Rc<Reservation>> {
         let mut v = Vec::new();
         for i in 0..(reservation_block.len() / 16 as usize) {
             let address = u64::from_be_bytes(
@@ -93,21 +101,21 @@ impl DtbParser {
                     .try_into()
                     .unwrap(),
             );
-            let size = u64::from_be_bytes(
+            let length = u64::from_be_bytes(
                 reservation_block[(i * 16 + 8)..(i * 16 + 16)]
                     .try_into()
                     .unwrap(),
             );
-            if address == 0 && size == 0 {
+            if address == 0 && length == 0 {
                 break;
             } else {
-                v.push(ReserveEntry { address, size })
+                v.push(Rc::new(Reservation { address, length }))
             }
         }
         v
     }
 
-    fn parse_structure_block(&self, structure_block: &[u8]) -> Tree {
+    fn parse_structure_block(&self, structure_block: &[u8]) -> Node {
         let token = u32::from_be_bytes(structure_block[0..4].try_into().unwrap());
         // The first token must be the root node of the tree
         if token != 1 {
@@ -125,8 +133,7 @@ impl DtbParser {
         if token != 9 {
             panic!("Root node is not found")
         }
-
-        Tree::new(vec![], root_node)
+        root_node
     }
 
     // struct_block starts immediately after the FDT_BEGIN_NODE token,
@@ -242,7 +249,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dtb_parse_reservation_block() {
+    fn test_dtb_parse_reservation_block_0() {
         let mut f = File::open("test/dtb_0.dtb").unwrap();
         let mut buffer = Vec::new();
 
@@ -253,5 +260,23 @@ mod tests {
 
         let v = dtb_parser.reserve_entries;
         assert_eq!(v.len(), 0);
+    }
+
+    #[test]
+    fn test_dtb_parse_reservation_block_4() {
+        let mut f = File::open("test/dtb_4.dtb").unwrap();
+        let mut buffer = Vec::new();
+
+        // read the whole file
+        f.read_to_end(&mut buffer).unwrap();
+
+        let dtb_parser = DtbParser::from_bytes(&buffer);
+
+        let reservations = dtb_parser.reserve_entries;
+        assert_eq!(reservations.len(), 5);
+        assert_eq!(reservations[0].address, 0x0);
+        assert_eq!(reservations[0].length, 0x100000);
+        assert_eq!(reservations[3].address, 0x300000);
+        assert_eq!(reservations[3].length, 0x100000);
     }
 }
