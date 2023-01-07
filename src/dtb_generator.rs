@@ -10,14 +10,14 @@ use std::rc::Rc;
 #[allow(dead_code)]
 pub struct DtbGenerator {
     header: DtbHeader,
-    reserve_entries: Vec<Reservation>,
+    reservations: Vec<Rc<Reservation>>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
     root_node: Rc<Node>,
 }
 
 impl DtbGenerator {
-    pub fn from_tree(root_node: Rc<Node>) -> DtbGenerator {
+    pub fn from_tree(root_node: Rc<Node>, reservations: Vec<Rc<Reservation>>) -> DtbGenerator {
         let header = DtbHeader {
             magic: 0u32,
             total_size: 0u32,
@@ -30,12 +30,12 @@ impl DtbGenerator {
             size_dt_strings: 0u32,
             size_dt_struct: 0u32,
         };
-        let reserve_entries: Vec<Reservation> = vec![];
+
         let strings_block: Vec<u8> = vec![];
         let structure_block: Vec<u8> = vec![];
         DtbGenerator {
             header,
-            reserve_entries,
+            reservations,
             strings_block,
             structure_block,
             root_node,
@@ -150,12 +150,20 @@ impl DtbGenerator {
     }
 
     fn generate_reservation_block(&self) -> Vec<u8> {
-        let mut address = 0u64.to_be_bytes().to_vec();
-        let mut size = 0u64.to_be_bytes().to_vec();
-
         let mut bytes: Vec<u8> = vec![];
+        let reservations = &self.reservations;
+        for reservation in reservations {
+            let address = reservation.address;
+            let mut address = address.to_be_bytes().to_vec();
+            let length = reservation.length;
+            let mut length = length.to_be_bytes().to_vec();
+            bytes.append(&mut address);
+            bytes.append(&mut length);
+        }
+        let mut address = 0u64.to_be_bytes().to_vec();
         bytes.append(&mut address);
-        bytes.append(&mut size);
+        let mut length = 0u64.to_be_bytes().to_vec();
+        bytes.append(&mut length);
 
         bytes
     }
@@ -207,7 +215,7 @@ mod tests {
         let tree = Tree::new(vec![], root);
 
         // Generate the DTB
-        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone());
+        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone(), vec![]);
         let dtb_bytes = dtb_generator.generate();
 
         // Parse the generated DTB and check
@@ -258,6 +266,32 @@ mod tests {
 
     #[test]
     fn test_dtb_generate_2() {
+        // Build a simple device tree
+        let mut root = Node::new("/");
+        root.add_attr(Attribute::new_strings(
+            "compatible",
+            vec![String::from("linux,dummy-virt")],
+        ));
+        let mut reservations = vec![];
+        reservations.push(Rc::new(Reservation::new(0x0, 0x100000)));
+        reservations.push(Rc::new(Reservation::new(0x100000, 0x100000)));
+        reservations.push(Rc::new(Reservation::new(0x200000, 0x100000)));
+
+        // Generate the DTB
+        let mut dtb_generator = DtbGenerator::from_tree(Rc::new(root), reservations);
+        let dtb_bytes = dtb_generator.generate();
+
+        // Parse the generated DTB and check
+        let tree = DtbParser::from_bytes(&dtb_bytes).parse();
+        assert_eq!(tree.root.name, "/");
+        assert_eq!(tree.root.attributes[0].name, "compatible");
+        assert_eq!(tree.root.attributes[0].value.len(), 17);
+        let s = DtsGenerator::generate_tree(&tree);
+        assert_eq!(s, "/dts-v1/;\n\n/memreserve/ 0x0000000000000000 0x0000000000100000;\n/memreserve/ 0x0000000000100000 0x0000000000100000;\n/memreserve/ 0x0000000000200000 0x0000000000100000;\n\n/ {\n\tcompatible = <0x6c 0x69 0x6e 0x75 0x78 0x2c 0x64 0x75 0x6d 0x6d 0x79 0x2d 0x76 0x69 0x72 0x74 0x0>;\n};\n");
+    }
+
+    #[test]
+    fn test_dtb_generate_3() {
         let mut f = File::open("test/dtb_0.dtb").unwrap();
         let mut buffer = Vec::new();
 
@@ -266,7 +300,7 @@ mod tests {
 
         let tree = DtbParser::from_bytes(&buffer).parse();
 
-        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone());
+        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone(), vec![]);
         let dtb_bytes = dtb_generator.generate();
 
         // parse the generated DTB

@@ -34,7 +34,11 @@ impl Tree {
     }
 
     pub fn generate_dtb(&self) -> Vec<u8> {
-        DtbGenerator::from_tree(self.root.clone()).generate()
+        let mut reservations = vec![];
+        for reservation in &self.reservations {
+            reservations.push(reservation.clone());
+        }
+        DtbGenerator::from_tree(self.root.clone(), reservations).generate()
     }
 }
 
