@@ -86,7 +86,7 @@ impl DtbGenerator {
         bytes
     }
 
-    fn generate_attribute(&mut self, attr: &Rc<Attribute>) -> Vec<u8> {
+    fn generate_attribute(&mut self, attr: &Attribute) -> Vec<u8> {
         let mut token = 3u32.to_be_bytes().to_vec();
         let mut len = (attr.value.len() as u32).to_be_bytes().to_vec();
         let name = attr.name.clone();
@@ -108,7 +108,7 @@ impl DtbGenerator {
         bytes
     }
 
-    fn generate_node(&mut self, node: &Rc<Node>) -> Vec<u8> {
+    fn generate_node(&mut self, node: &Node) -> Vec<u8> {
         let mut token = 1u32.to_be_bytes().to_vec();
         let mut name = node.name.clone().as_bytes().to_owned();
         name.push(0u8);

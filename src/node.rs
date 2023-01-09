@@ -3,12 +3,11 @@
 
 use crate::attribute::Attribute;
 use crate::dts_generator::DtsGenerator;
-use std::rc::Rc;
 
 pub struct Node {
     pub name: String,
-    pub attributes: Vec<Rc<Attribute>>,
-    pub sub_nodes: Vec<Rc<Node>>,
+    pub attributes: Vec<Attribute>,
+    pub sub_nodes: Vec<Node>,
 }
 
 impl Node {
@@ -21,11 +20,11 @@ impl Node {
     }
 
     pub fn add_attr(&mut self, attr: Attribute) {
-        self.attributes.push(Rc::new(attr));
+        self.attributes.push(attr);
     }
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
-        self.sub_nodes.push(Rc::new(sub_node));
+        self.sub_nodes.push(sub_node);
     }
 }
 
