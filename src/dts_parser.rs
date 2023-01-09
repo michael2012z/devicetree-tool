@@ -61,8 +61,11 @@ impl DtsParser {
                     // Found node
                     let node_name =
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
-                    // TODO: the node_name must be "/", fail otherwise
-                    println!("found node {}", node_name);
+                    // The node name must be "/", fail otherwise
+                    if node_name != "/" {
+                        panic!("node {node_name} is not expected")
+                    }
+
                     i = i + 1;
                     // Update the root node content
                     let node_size = DtsParser::parse_node(&dts[i..], &mut root_node);
@@ -88,11 +91,23 @@ impl DtsParser {
                     // Found node
                     let sub_node_name =
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
-                    let mut sub_node = Node::new(sub_node_name);
                     println!("found node {}", sub_node_name);
+
+                    // If a sub_node with the name doesn't exist, create one
+                    if !node.sub_nodes.iter().any(|x| &x.name == sub_node_name) {
+                        let new_sub_node = Node::new(sub_node_name);
+                        node.add_sub_node(new_sub_node);
+                    }
+
+                    // Get the sub_node out and update
+                    let sub_node = node
+                        .sub_nodes
+                        .iter_mut()
+                        .find(|x| &x.name == sub_node_name)
+                        .unwrap();
+
                     i = i + 1;
-                    let node_size = DtsParser::parse_node(&dts[i..], &mut sub_node);
-                    node.add_sub_node(sub_node);
+                    let node_size = DtsParser::parse_node(&dts[i..], sub_node);
                     i = i + node_size;
                     text.clear();
                 }
@@ -117,6 +132,7 @@ impl DtsParser {
                 ';' => {
                     // We found either:
                     //  - An attribute without value or a compiler directive
+                    //  - A directive like `/delete-node/` or `/delete-property/`
                     //  - Or the end of the node
                     i = i + 1;
                     if at_end {
@@ -128,7 +144,31 @@ impl DtsParser {
                         text.clear();
                         if attr_name.starts_with("/") {
                             // A compiler directive
-                            DtsParser::handle_directive(&attr_name);
+                            let directive = attr_name;
+                            println!("found directive: {directive}");
+                            let mut slices = directive.split_ascii_whitespace();
+                            let instruction = slices.next().unwrap();
+                            if instruction == "/delete-node/" {
+                                let sub_node_name = slices.next().unwrap();
+                                println!("delete node: {sub_node_name}");
+                                let sub_node_index = node
+                                    .sub_nodes
+                                    .iter()
+                                    .position(|x| x.name == sub_node_name)
+                                    .unwrap();
+                                node.sub_nodes.remove(sub_node_index);
+                            } else if instruction == "/delete-property/" {
+                                let property_name = slices.next().unwrap();
+                                println!("delete property: {property_name}");
+                                let property_index = node
+                                    .attributes
+                                    .iter()
+                                    .position(|x| x.name == property_name)
+                                    .unwrap();
+                                node.attributes.remove(property_index);
+                            } else {
+                                panic!("unknown comipler directive {directive}")
+                            }
                         } else {
                             println!("found attribute {} without value", attr_name);
                             let attr = Attribute::new_empty(&attr_name);
@@ -276,21 +316,6 @@ impl DtsParser {
     fn parse_attribute_value_string(text: &[u8]) -> Vec<u8> {
         println!("string: {}", String::from_utf8_lossy(text));
         text.to_vec()
-    }
-
-    fn handle_directive(directive: &str) {
-        println!("handle directive: {directive}");
-        let mut slices = directive.split_ascii_whitespace();
-        let instruction = slices.next().unwrap();
-        if instruction == "/delete-node/" {
-            let node_path = slices.next().unwrap();
-            println!("delete node: {node_path}");
-        } else if instruction == "/delete-property/" {
-            let property_path = slices.next().unwrap();
-            println!("delete property: {property_path}");
-        } else {
-            panic!("unknown comipler directive {directive}")
-        }
     }
 
     // Return the space of a C-style comment: (start location, size)
@@ -476,5 +501,21 @@ mod tests {
         assert_eq!(tree.reservations[0].length, 0x100000);
         assert_eq!(tree.reservations[4].address, 0x400000);
         assert_eq!(tree.reservations[4].length, 0x100000);
+    }
+
+    #[test]
+    fn test_dts_parse_deletion() {
+        // Read the DTS text from test data folder
+        let dts = std::fs::read("test/dts_5.dts").unwrap();
+        let tree = DtsParser::parse(&dts);
+
+        assert_eq!(tree.root.sub_nodes.len(), 1);
+        assert_eq!(tree.root.sub_nodes[0].name, "node_b");
+        assert_eq!(tree.root.sub_nodes[0].attributes.len(), 1);
+        assert_eq!(tree.root.sub_nodes[0].attributes[0].name, "property_key_0");
+        assert_eq!(
+            tree.root.sub_nodes[0].attributes[0].value,
+            vec!['v' as u8, '_' as u8, '0' as u8]
+        );
     }
 }

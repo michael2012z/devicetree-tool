@@ -1,0 +1,25 @@
+/dts-v1/;
+
+/ {
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	node_a {
+        #address-cells = <0x2>;
+    	#size-cells = <0x2>;
+    };
+
+    node_b {
+        property_key_0 = "v_0";
+        property_key_1 = "v_1";
+    };
+};
+
+
+/ {
+    /delete-node/ node_a;
+
+    node_b {
+        /delete-property/ property_key_1;
+    };
+};
