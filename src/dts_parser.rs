@@ -8,15 +8,11 @@ use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tr
 pub struct DtsParser {}
 
 impl DtsParser {
-    // Remove comments;
-    // Handle compiler instructions;
-    // Remove DTS header.
     pub fn parse(dts: &[u8]) -> Tree {
-        // Remove comments
-        let dts = &DtsParser::remove_c_style_comments(dts);
-        let dts = &DtsParser::remove_cpp_style_comments(dts);
-
-        // TODO: Compiler instructions
+        // Pre-process to remove comments and handle inclusion
+        let dts_string = String::from_utf8_lossy(dts);
+        let dts_string = DtsParser::pre_process(&dts_string, 8);
+        let dts = dts_string.as_bytes();
 
         let mut root_node = Node::new("/");
         let mut reservations: Vec<Rc<Reservation>> = vec![];
@@ -318,6 +314,47 @@ impl DtsParser {
         text.to_vec()
     }
 
+    fn pre_process(dts: &str, inclusion_depth: usize) -> String {
+        if inclusion_depth == 0 {
+            panic!("maximum inclusion depth reached")
+        }
+        let dts_bytes = dts.as_bytes();
+        let dts_bytes = &DtsParser::remove_c_style_comments(dts_bytes);
+        let dts_bytes = &DtsParser::remove_cpp_style_comments(dts_bytes);
+
+        let dts = String::from_utf8_lossy(dts_bytes);
+
+        let mut processed_dts = String::new();
+        let lines: Vec<&str> = dts.split("\n").collect();
+        for line in lines {
+            if line.find("/include/").is_some() {
+                let index = line.find("/include/").unwrap();
+
+                if index > 0 {
+                    // something is before the `/include/`
+                    processed_dts.push_str(&line[0..index]);
+                }
+
+                let path = line[(index + 9)..].trim();
+                if path.chars().nth(0).unwrap() != '"'
+                    || path.chars().nth(path.len() - 1).unwrap() != '"'
+                {
+                    panic!("included file path error: {path}")
+                }
+                let path = &path[1..(path.len() - 1)];
+                println!("path: {path}");
+                let included_dts = std::fs::read_to_string(path).unwrap();
+                let included_dts = DtsParser::pre_process(&included_dts, inclusion_depth - 1);
+                processed_dts.push_str(&included_dts);
+                processed_dts.push('\n');
+            } else {
+                processed_dts.push_str(line);
+                processed_dts.push('\n');
+            }
+        }
+        processed_dts
+    }
+
     // Return the space of a C-style comment: (start location, size)
     fn find_c_comment(text: &[u8]) -> Option<(usize, usize)> {
         if let Some(comment_start) = text
@@ -517,5 +554,13 @@ mod tests {
             tree.root.sub_nodes[0].attributes[0].value,
             vec!['v' as u8, '_' as u8, '0' as u8]
         );
+    }
+
+    #[test]
+    fn test_dts_parse_pre_process() {
+        let dts = std::fs::read_to_string("test/dts_6.dts").unwrap();
+        let dts = DtsParser::pre_process(&dts, 8);
+        assert_eq!(dts.find("/include/").is_none(), true);
+        assert_eq!(dts.find("#address-cells").is_some(), true);
     }
 }

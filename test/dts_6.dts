@@ -1,0 +1,3 @@
+/dts-v1/;
+
+/include/ "test/dts_1.dts"
