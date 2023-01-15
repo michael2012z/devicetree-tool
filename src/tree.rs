@@ -10,12 +10,12 @@ use crate::reservation::Reservation;
 use std::rc::Rc;
 
 pub struct Tree {
-    pub reservations: Vec<Rc<Reservation>>,
+    pub reservations: Vec<Reservation>,
     pub root: Rc<Node>,
 }
 
 impl Tree {
-    pub fn new(reservations: Vec<Rc<Reservation>>, root: Node) -> Self {
+    pub fn new(reservations: Vec<Reservation>, root: Node) -> Self {
         Tree {
             reservations,
             root: Rc::new(root),
@@ -36,7 +36,7 @@ impl Tree {
     pub fn generate_dtb(&self) -> Vec<u8> {
         let mut reservations = vec![];
         for reservation in &self.reservations {
-            reservations.push(reservation.clone());
+            reservations.push(reservation.to_owned());
         }
         DtbGenerator::from_tree(self.root.clone(), reservations).generate()
     }

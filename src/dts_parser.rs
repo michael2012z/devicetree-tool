@@ -1,8 +1,6 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use std::rc::Rc;
-
 use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree};
 
 pub struct DtsParser {}
@@ -15,7 +13,7 @@ impl DtsParser {
         let dts = dts_string.as_bytes();
 
         let mut root_node = Node::new("/");
-        let mut reservations: Vec<Rc<Reservation>> = vec![];
+        let mut reservations: Vec<Reservation> = vec![];
         // The remaining content should be root node(s)
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -48,7 +46,7 @@ impl DtsParser {
                             "detected /memreserve/: address = {:#018x}, length = {:#018x}",
                             address, length
                         );
-                        reservations.push(Rc::new(Reservation::new(address, length)));
+                        reservations.push(Reservation::new(address, length));
                     } else {
                         panic!("unknown top-level statement: {statement}");
                     }

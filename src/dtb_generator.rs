@@ -10,14 +10,14 @@ use std::rc::Rc;
 #[allow(dead_code)]
 pub struct DtbGenerator {
     header: DtbHeader,
-    reservations: Vec<Rc<Reservation>>,
+    reservations: Vec<Reservation>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
     root_node: Rc<Node>,
 }
 
 impl DtbGenerator {
-    pub fn from_tree(root_node: Rc<Node>, reservations: Vec<Rc<Reservation>>) -> DtbGenerator {
+    pub fn from_tree(root_node: Rc<Node>, reservations: Vec<Reservation>) -> DtbGenerator {
         let header = DtbHeader {
             magic: 0u32,
             total_size: 0u32,
@@ -273,9 +273,9 @@ mod tests {
             vec![String::from("linux,dummy-virt")],
         ));
         let mut reservations = vec![];
-        reservations.push(Rc::new(Reservation::new(0x0, 0x100000)));
-        reservations.push(Rc::new(Reservation::new(0x100000, 0x100000)));
-        reservations.push(Rc::new(Reservation::new(0x200000, 0x100000)));
+        reservations.push(Reservation::new(0x0, 0x100000));
+        reservations.push(Reservation::new(0x100000, 0x100000));
+        reservations.push(Reservation::new(0x200000, 0x100000));
 
         // Generate the DTB
         let mut dtb_generator = DtbGenerator::from_tree(Rc::new(root), reservations);
