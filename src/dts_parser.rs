@@ -1,6 +1,8 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use std::borrow::BorrowMut;
+
 use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree};
 
 pub struct DtsParser {}
@@ -12,9 +14,18 @@ impl DtsParser {
         let dts_string = DtsParser::pre_process(&dts_string, 8);
         let dts = dts_string.as_bytes();
 
-        let mut root_node = Node::new("/");
-        let mut reservations: Vec<Reservation> = vec![];
-        // The remaining content should be root node(s)
+        let mut tree = Tree::new(vec![], Node::new("/"));
+
+        DtsParser::parse_tree(dts, &mut tree, true);
+        DtsParser::parse_tree(dts, &mut tree, false);
+        tree
+    }
+
+    // Parse the DTS text that has been pre-processed and update the tree struct.
+    // If `node_only` is true, only parse the node structure, and create nodes and subnodes
+    // in the tree with names, all attributes and indirectives will be ignored.
+    fn parse_tree(dts: &[u8], tree: &mut Tree, node_only: bool) {
+        let root_node = tree.root.borrow_mut();
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         while i < dts.len() {
@@ -25,6 +36,11 @@ impl DtsParser {
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
                     i = i + 1;
                     text.clear();
+
+                    if node_only {
+                        continue;
+                    }
+
                     if statement == "/dts-v1/" {
                         println!("detected /dts-v1/;");
                     } else if statement.starts_with("/memreserve/") {
@@ -46,7 +62,7 @@ impl DtsParser {
                             "detected /memreserve/: address = {:#018x}, length = {:#018x}",
                             address, length
                         );
-                        reservations.push(Reservation::new(address, length));
+                        tree.reservations.push(Reservation::new(address, length));
                     } else {
                         panic!("unknown top-level statement: {statement}");
                     }
@@ -62,7 +78,7 @@ impl DtsParser {
 
                     i = i + 1;
                     // Update the root node content
-                    let node_size = DtsParser::parse_node(&dts[i..], &mut root_node);
+                    let node_size = DtsParser::parse_node(&dts[i..], root_node, node_only);
                     i = i + node_size;
                     text.clear();
                 }
@@ -72,10 +88,9 @@ impl DtsParser {
                 }
             }
         }
-        Tree::new(reservations, root_node)
     }
 
-    fn parse_node(dts: &[u8], node: &mut Node) -> usize {
+    fn parse_node(dts: &[u8], node: &mut Node, node_only: bool) -> usize {
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         let mut at_end = false;
@@ -101,7 +116,7 @@ impl DtsParser {
                         .unwrap();
 
                     i = i + 1;
-                    let node_size = DtsParser::parse_node(&dts[i..], sub_node);
+                    let node_size = DtsParser::parse_node(&dts[i..], sub_node, node_only);
                     i = i + node_size;
                     text.clear();
                 }
@@ -118,10 +133,12 @@ impl DtsParser {
                     i = i + 1;
                     let (attribute_value_size, attribute_value) =
                         DtsParser::parse_attribute_value(&dts[i..]);
-                    let attr = Attribute::new_u8s(attr_name, attribute_value);
-                    node.add_attr(attr);
                     i = i + attribute_value_size;
                     text.clear();
+                    if !node_only {
+                        let attr = Attribute::new_u8s(attr_name, attribute_value);
+                        node.add_attr(attr);
+                    }
                 }
                 ';' => {
                     // We found either:
@@ -136,6 +153,11 @@ impl DtsParser {
                         let attr_name =
                             String::from(String::from_utf8_lossy(&text).to_string().trim());
                         text.clear();
+
+                        if node_only {
+                            continue;
+                        }
+
                         if attr_name.starts_with("/") {
                             // A compiler directive
                             let directive = attr_name;
