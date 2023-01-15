@@ -5,19 +5,18 @@ use crate::attribute::Attribute;
 use crate::dtb::DtbHeader;
 use crate::node::Node;
 use crate::reservation::Reservation;
-use std::rc::Rc;
 
 #[allow(dead_code)]
-pub struct DtbGenerator {
+pub struct DtbGenerator<'a> {
     header: DtbHeader,
     reservations: Vec<Reservation>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
-    root_node: Rc<Node>,
+    root_node: &'a Node,
 }
 
-impl DtbGenerator {
-    pub fn from_tree(root_node: Rc<Node>, reservations: Vec<Reservation>) -> DtbGenerator {
+impl DtbGenerator<'_> {
+    pub fn from_tree(root_node: &Node, reservations: Vec<Reservation>) -> DtbGenerator {
         let header = DtbHeader {
             magic: 0u32,
             total_size: 0u32,
@@ -140,7 +139,7 @@ impl DtbGenerator {
     }
 
     fn generate_structure_block(&mut self) -> Vec<u8> {
-        let root = &self.root_node.clone();
+        let root = self.root_node;
         let mut token = 9u32.to_be_bytes().to_vec();
 
         let mut bytes = self.generate_node(root);
@@ -215,7 +214,7 @@ mod tests {
         let tree = Tree::new(vec![], root);
 
         // Generate the DTB
-        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone(), vec![]);
+        let mut dtb_generator = DtbGenerator::from_tree(&tree.root, vec![]);
         let dtb_bytes = dtb_generator.generate();
 
         // Parse the generated DTB and check
@@ -278,7 +277,7 @@ mod tests {
         reservations.push(Reservation::new(0x200000, 0x100000));
 
         // Generate the DTB
-        let mut dtb_generator = DtbGenerator::from_tree(Rc::new(root), reservations);
+        let mut dtb_generator = DtbGenerator::from_tree(&root, reservations);
         let dtb_bytes = dtb_generator.generate();
 
         // Parse the generated DTB and check
@@ -300,7 +299,7 @@ mod tests {
 
         let tree = DtbParser::from_bytes(&buffer).parse();
 
-        let mut dtb_generator = DtbGenerator::from_tree(tree.root.clone(), vec![]);
+        let mut dtb_generator = DtbGenerator::from_tree(&tree.root, vec![]);
         let dtb_bytes = dtb_generator.generate();
 
         // parse the generated DTB

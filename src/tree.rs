@@ -7,18 +7,17 @@ use crate::dts_generator::DtsGenerator;
 use crate::dts_parser::DtsParser;
 use crate::node::Node;
 use crate::reservation::Reservation;
-use std::rc::Rc;
 
 pub struct Tree {
     pub reservations: Vec<Reservation>,
-    pub root: Rc<Node>,
+    pub root: Node,
 }
 
 impl Tree {
     pub fn new(reservations: Vec<Reservation>, root: Node) -> Self {
         Tree {
             reservations,
-            root: Rc::new(root),
+            root: root,
         }
     }
 
@@ -38,7 +37,7 @@ impl Tree {
         for reservation in &self.reservations {
             reservations.push(reservation.to_owned());
         }
-        DtbGenerator::from_tree(self.root.clone(), reservations).generate()
+        DtbGenerator::from_tree(&self.root, reservations).generate()
     }
 }
 
