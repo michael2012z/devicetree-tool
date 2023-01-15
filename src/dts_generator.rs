@@ -73,7 +73,6 @@ impl DtsGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::rc::Rc;
 
     #[test]
     fn test_dts_generate_attribute_none() {
@@ -172,7 +171,7 @@ mod tests {
     fn test_dts_generate_tree_reservation() {
         let root = Node::new("root");
         let reservation = Reservation::new(0x0, 0x100000);
-        let tree = Tree::new(vec![Rc::new(reservation)], root);
+        let tree = Tree::new(vec![reservation], root);
         assert_eq!(
             DtsGenerator::generate_tree(&tree),
             "/dts-v1/;\n\n/memreserve/ 0x0000000000000000 0x0000000000100000;\n\nroot {\n};\n"

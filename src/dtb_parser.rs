@@ -1,8 +1,6 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use std::rc::Rc;
-
 use crate::attribute::Attribute;
 use crate::dtb::DtbHeader;
 use crate::node::Node;
@@ -12,7 +10,7 @@ use crate::tree::Tree;
 #[allow(dead_code)]
 pub struct DtbParser {
     header: DtbHeader,
-    reserve_entries: Vec<Rc<Reservation>>,
+    reserve_entries: Vec<Reservation>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
 }
@@ -48,7 +46,7 @@ impl DtbParser {
         let root_node = self.parse_structure_block(self.structure_block.as_ref());
         let mut reservations = vec![];
         for reservation in &self.reserve_entries {
-            reservations.push(reservation.clone());
+            reservations.push(reservation.to_owned());
         }
         Tree::new(reservations, root_node)
     }
@@ -93,7 +91,7 @@ impl DtbParser {
 
     // reservation_block may contain the bytes after the actual reservation block.
     // The real reservation block is zero-terminated.
-    fn parse_reservation_block(reservation_block: &[u8]) -> Vec<Rc<Reservation>> {
+    fn parse_reservation_block(reservation_block: &[u8]) -> Vec<Reservation> {
         let mut v = Vec::new();
         for i in 0..(reservation_block.len() / 16 as usize) {
             let address = u64::from_be_bytes(
@@ -109,7 +107,7 @@ impl DtbParser {
             if address == 0 && length == 0 {
                 break;
             } else {
-                v.push(Rc::new(Reservation { address, length }))
+                v.push(Reservation { address, length })
             }
         }
         v

@@ -3,6 +3,7 @@
 
 use crate::dts_generator::DtsGenerator;
 
+#[derive(Copy, Clone)]
 pub struct Reservation {
     pub address: u64,
     pub length: u64,
