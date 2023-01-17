@@ -21,6 +21,19 @@ impl Tree {
         }
     }
 
+    pub fn find_node_with_label(&self, label: &str) -> Option<&Node> {
+        self.root.find_subnode_with_label(label)
+    }
+
+    pub fn find_node_with_path(&self, path: &str) -> Option<&Node> {
+        let path: Vec<&str> = path.split("/").collect();
+        if path.len() == 0 {
+            Some(&self.root)
+        } else {
+            self.root.find_subnode_with_path(path[1..].to_vec())
+        }
+    }
+
     pub fn from_dts_bytes(dts: &[u8]) -> Self {
         DtsParser::parse(&dts)
     }
