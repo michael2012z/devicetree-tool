@@ -299,7 +299,26 @@ impl DtsParser {
         println!("cells: {}", String::from_utf8_lossy(text));
         println!("cells:");
         for num in String::from_utf8_lossy(text).split_whitespace() {
-            let n = if num.starts_with("0x") {
+            // A value could be in format:
+            //   * &LABEL
+            //   * &{/FULL/PATH}
+            //   * 0x12
+            //   * 42
+            let n = if num.starts_with("&") {
+                // This is a reference to another node
+                if num[1..].starts_with("{") && num[1..].ends_with("}") {
+                    // Get the full path
+                    let _ref_node_path = &num[2..(num.len() - 1)];
+                    // TODO: get the phandle of the node
+                    let phandle = 0u32;
+                    phandle
+                } else {
+                    // It should be a lable
+                    // TODO: get the phandle of the node
+                    let phandle = 0u32;
+                    phandle
+                }
+            } else if num.starts_with("0x") {
                 u32::from_str_radix(&num[2..], 16).unwrap()
             } else {
                 u32::from_str_radix(num, 10).unwrap()
