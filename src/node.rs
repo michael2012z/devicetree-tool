@@ -6,6 +6,7 @@ use crate::dts_generator::DtsGenerator;
 
 pub struct Node {
     pub name: String,
+    pub label: Option<String>,
     pub attributes: Vec<Attribute>,
     pub sub_nodes: Vec<Node>,
 }
@@ -14,6 +15,7 @@ impl Node {
     pub fn new(name: &str) -> Self {
         Node {
             name: String::from(name),
+            label: None,
             attributes: Vec::new(),
             sub_nodes: Vec::new(),
         }
@@ -25,6 +27,48 @@ impl Node {
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
         self.sub_nodes.push(sub_node);
+    }
+
+    pub fn find_attr(&self, name: &str) -> Option<&Attribute> {
+        for attr in &self.attributes {
+            if name == &attr.name {
+                return Some(attr);
+            }
+        }
+        None
+    }
+
+    pub fn find_subnode_with_label(&self, label: &str) -> Option<&Node> {
+        for sub_node in &self.sub_nodes {
+            if let Some(sub_node_label) = &sub_node.label {
+                if sub_node_label == label {
+                    return Some(sub_node);
+                }
+            }
+            let sub_node_with_label = sub_node.find_subnode_with_label(label);
+            if sub_node_with_label.is_some() {
+                return sub_node_with_label;
+            }
+        }
+        None
+    }
+
+    pub fn find_subnode_with_path(&self, path: Vec<&str>) -> Option<&Node> {
+        for sub_node in &self.sub_nodes {
+            if sub_node.name == path[0] {
+                if path.len() == 1 {
+                    // Found the matching node
+                    return Some(sub_node);
+                } else {
+                    // There are more to match
+                    let sub_node_with_path = sub_node.find_subnode_with_path(path[1..].to_vec());
+                    if sub_node_with_path.is_some() {
+                        return sub_node_with_path;
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
