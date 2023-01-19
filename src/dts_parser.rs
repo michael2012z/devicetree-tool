@@ -4,27 +4,43 @@
 use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree};
 use std::sync::{Arc, Mutex};
 
-pub struct DtsParser {}
+pub struct DtsParser {
+    dts: Vec<u8>,
+    next_phandle: u32,
+    tree: Tree,
+}
 
 impl DtsParser {
-    pub fn parse(dts: &[u8]) -> Tree {
+    pub fn from_bytes(dts: &[u8]) -> Self {
+        DtsParser {
+            dts: dts.clone().to_owned(),
+            next_phandle: 0,
+            tree: Tree::new(vec![], Node::new("/")),
+        }
+    }
+
+    pub fn parse(&mut self) -> Tree {
         // Pre-process to remove comments and handle inclusion
-        let dts_string = String::from_utf8_lossy(dts);
+        let dts_string = String::from_utf8_lossy(&self.dts);
         let dts_string = DtsParser::pre_process(&dts_string, 8);
         let dts = dts_string.as_bytes();
 
-        let mut tree = Tree::new(vec![], Node::new("/"));
-
-        DtsParser::parse_tree(dts, &mut tree, true);
-        DtsParser::parse_tree(dts, &mut tree, false);
-        tree
+        self.parse_tree(dts, false);
+        let mut reservations_clone = vec![];
+        for reservation in &self.tree.reservations {
+            reservations_clone.push(reservation.clone());
+        }
+        Tree {
+            reservations: reservations_clone,
+            root: self.tree.root.clone(),
+        }
     }
 
     // Parse the DTS text that has been pre-processed and update the tree struct.
     // If `node_only` is true, only parse the node structure, and create nodes and subnodes
     // in the tree with names, all attributes and indirectives will be ignored.
-    fn parse_tree(dts: &[u8], tree: &mut Tree, node_only: bool) {
-        let root_node = tree.root.clone();
+    fn parse_tree(&mut self, dts: &[u8], node_only: bool) {
+        let root_node = self.tree.root.clone();
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         while i < dts.len() {
@@ -61,7 +77,8 @@ impl DtsParser {
                             "detected /memreserve/: address = {:#018x}, length = {:#018x}",
                             address, length
                         );
-                        tree.reservations
+                        self.tree
+                            .reservations
                             .push(Arc::new(Mutex::new(Reservation::new(address, length))));
                     } else {
                         panic!("unknown top-level statement: {statement}");
@@ -78,7 +95,7 @@ impl DtsParser {
 
                     i = i + 1;
                     // Update the root node content
-                    let node_size = DtsParser::parse_node(&dts[i..], root_node.clone(), node_only);
+                    let node_size = self.parse_node(&dts[i..], root_node.clone(), node_only);
                     i = i + node_size;
                     text.clear();
                 }
@@ -90,7 +107,7 @@ impl DtsParser {
         }
     }
 
-    fn parse_node(dts: &[u8], node: Arc<Mutex<Node>>, node_only: bool) -> usize {
+    fn parse_node(&mut self, dts: &[u8], node: Arc<Mutex<Node>>, node_only: bool) -> usize {
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         let mut at_end = false;
@@ -122,7 +139,7 @@ impl DtsParser {
                         .unwrap();
 
                     i = i + 1;
-                    let node_size = DtsParser::parse_node(&dts[i..], sub_node, node_only);
+                    let node_size = self.parse_node(&dts[i..], sub_node, node_only);
                     i = i + node_size;
                     text.clear();
                 }
@@ -138,7 +155,7 @@ impl DtsParser {
                     println!("found attribute {} with value:", attr_name);
                     i = i + 1;
                     let (attribute_value_size, attribute_value) =
-                        DtsParser::parse_attribute_value(&dts[i..]);
+                        self.parse_attribute_value(&dts[i..]);
                     i = i + attribute_value_size;
                     text.clear();
                     if !node_only {
@@ -211,7 +228,7 @@ impl DtsParser {
         panic!("attribute not ended");
     }
 
-    fn parse_attribute_value(dts: &[u8]) -> (usize, Vec<u8>) {
+    fn parse_attribute_value(&mut self, dts: &[u8]) -> (usize, Vec<u8>) {
         let mut value: Vec<u8> = vec![];
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -238,7 +255,7 @@ impl DtsParser {
                     }
                     value_type = 0;
 
-                    let cells_value = DtsParser::parse_attribute_value_cells(&text);
+                    let cells_value = self.parse_attribute_value_cells(&text);
                     for d in cells_value {
                         value.push(d)
                     }
@@ -304,7 +321,7 @@ impl DtsParser {
         panic!("attribute not ended");
     }
 
-    fn parse_attribute_value_cells(text: &[u8]) -> Vec<u8> {
+    fn parse_attribute_value_cells(&mut self, text: &[u8]) -> Vec<u8> {
         let mut value: Vec<u8> = vec![];
         println!("cells: {}", String::from_utf8_lossy(text));
         println!("cells:");
@@ -318,14 +335,43 @@ impl DtsParser {
                 // This is a reference to another node
                 if num[1..].starts_with("{") && num[1..].ends_with("}") {
                     // Get the full path
-                    let _ref_node_path = &num[2..(num.len() - 1)];
-                    // TODO: get the phandle of the node
-                    let phandle = 0u32;
+                    let ref_node_path = &num[2..(num.len() - 1)];
+                    let node_to_ref = self.tree.find_node_with_path(ref_node_path).unwrap();
+                    let phandle = if let Some(phandle_attr) =
+                        node_to_ref.lock().unwrap().find_attr("phandle")
+                    {
+                        u32::from_be_bytes(
+                            phandle_attr.lock().unwrap().value[0..4].try_into().unwrap(),
+                        )
+                    } else {
+                        let phandle = self.next_phandle;
+                        self.next_phandle = self.next_phandle + 1;
+                        node_to_ref
+                            .lock()
+                            .unwrap()
+                            .add_attr(Attribute::new_u32("phandle", phandle));
+                        phandle
+                    };
                     phandle
                 } else {
-                    // It should be a lable
-                    // TODO: get the phandle of the node
-                    let phandle = 0u32;
+                    // It should be a label
+                    let label = &num[1..];
+                    let node_to_ref = self.tree.find_node_with_label(label).unwrap();
+                    let phandle = if let Some(phandle_attr) =
+                        node_to_ref.lock().unwrap().find_attr("phandle")
+                    {
+                        u32::from_be_bytes(
+                            phandle_attr.lock().unwrap().value[0..4].try_into().unwrap(),
+                        )
+                    } else {
+                        let phandle = self.next_phandle;
+                        self.next_phandle = self.next_phandle + 1;
+                        node_to_ref
+                            .lock()
+                            .unwrap()
+                            .add_attr(Attribute::new_u32("phandle", phandle));
+                        phandle
+                    };
                     phandle
                 }
             } else if num.starts_with("0x") {
@@ -501,7 +547,7 @@ mod tests {
     fn test_dts_parse_0() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_0.dts").unwrap();
-        let tree = DtsParser::parse(&dts);
+        let tree = DtsParser::from_bytes(&dts).parse();
         assert_eq!(tree.root.lock().unwrap().attributes.len(), 4);
     }
 
@@ -509,7 +555,7 @@ mod tests {
     fn test_dts_parse_1() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_2.dts").unwrap();
-        let tree = DtsParser::parse(&dts);
+        let tree = DtsParser::from_bytes(&dts).parse();
         assert_eq!(tree.root.lock().unwrap().sub_nodes.len(), 1);
         let node_cpus = &tree.root.lock().unwrap().sub_nodes[0];
         assert_eq!(node_cpus.lock().unwrap().sub_nodes.len(), 2);
@@ -584,7 +630,7 @@ mod tests {
     fn test_dts_parse_reservation() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_4.dts").unwrap();
-        let tree = DtsParser::parse(&dts);
+        let tree = DtsParser::from_bytes(&dts).parse();
         assert_eq!(tree.reservations.len(), 5);
         assert_eq!(tree.reservations[0].lock().unwrap().address, 0x0);
         assert_eq!(tree.reservations[0].lock().unwrap().length, 0x100000);
@@ -596,7 +642,7 @@ mod tests {
     fn test_dts_parse_deletion() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_5.dts").unwrap();
-        let tree = DtsParser::parse(&dts);
+        let tree = DtsParser::from_bytes(&dts).parse();
 
         assert_eq!(tree.root.lock().unwrap().sub_nodes.len(), 1);
         assert_eq!(

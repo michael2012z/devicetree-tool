@@ -43,7 +43,7 @@ impl Tree {
     }
 
     pub fn from_dts_bytes(dts: &[u8]) -> Self {
-        DtsParser::parse(&dts)
+        DtsParser::from_bytes(&dts).parse()
     }
 
     pub fn generate_dts(&self) -> String {
