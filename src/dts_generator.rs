@@ -63,7 +63,8 @@ impl DtsGenerator {
         let mut dts = String::from("/dts-v1/;\n\n");
         if tree.reservations.len() > 0 {
             for reservation in &tree.reservations {
-                let reservation_dts = DtsGenerator::generate_reservation(&reservation, 0);
+                let reserv = reservation.lock().unwrap();
+                let reservation_dts = DtsGenerator::generate_reservation(&reserv, 0);
                 dts.push_str(&reservation_dts);
                 dts.push_str("\n");
             }

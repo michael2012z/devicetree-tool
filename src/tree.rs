@@ -10,14 +10,18 @@ use crate::reservation::Reservation;
 use std::sync::{Arc, Mutex};
 
 pub struct Tree {
-    pub reservations: Vec<Reservation>,
+    pub reservations: Vec<Arc<Mutex<Reservation>>>,
     pub root: Arc<Mutex<Node>>,
 }
 
 impl Tree {
     pub fn new(reservations: Vec<Reservation>, root: Node) -> Self {
+        let mut reserv_refs = vec![];
+        for r in reservations {
+            reserv_refs.push(Arc::new(Mutex::new(r)));
+        }
         Tree {
-            reservations,
+            reservations: reserv_refs,
             root: Arc::new(Mutex::new(root)),
         }
     }
@@ -52,7 +56,7 @@ impl Tree {
     pub fn generate_dtb(&self) -> Vec<u8> {
         let mut reservations = vec![];
         for reservation in &self.reservations {
-            reservations.push(reservation.to_owned());
+            reservations.push(reservation.clone());
         }
         DtbGenerator::from_tree(&self.root.lock().unwrap(), reservations).generate()
     }
