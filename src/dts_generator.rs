@@ -32,14 +32,20 @@ impl DtsGenerator {
             s.push_str(&format!("{} ", node.name));
         }
         s.push_str("{\n");
-        for attr in node.attributes.iter() {
-            s.push_str(&DtsGenerator::generate_attribute(&attr, indent_level + 1));
+        for attr in &node.attributes {
+            s.push_str(&DtsGenerator::generate_attribute(
+                &attr.clone().lock().unwrap(),
+                indent_level + 1,
+            ));
             s.push_str("\n");
         }
 
         for sub_node in node.sub_nodes.iter() {
             s.push_str("\n");
-            s.push_str(&DtsGenerator::generate_node(&sub_node, indent_level + 1));
+            s.push_str(&DtsGenerator::generate_node(
+                &sub_node.clone().lock().unwrap(),
+                indent_level + 1,
+            ));
             s.push_str("\n");
         }
         s.push_str(&format!("{indents}}};"));
@@ -63,7 +69,7 @@ impl DtsGenerator {
             }
             dts.push_str("\n");
         }
-        let root_dts = DtsGenerator::generate_node(&tree.root, 0);
+        let root_dts = DtsGenerator::generate_node(&tree.root.clone().lock().unwrap(), 0);
         dts.push_str(&root_dts);
         dts.push_str("\n");
         dts

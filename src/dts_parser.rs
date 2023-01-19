@@ -1,9 +1,8 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use std::borrow::BorrowMut;
-
 use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree};
+use std::sync::{Arc, Mutex};
 
 pub struct DtsParser {}
 
@@ -25,7 +24,7 @@ impl DtsParser {
     // If `node_only` is true, only parse the node structure, and create nodes and subnodes
     // in the tree with names, all attributes and indirectives will be ignored.
     fn parse_tree(dts: &[u8], tree: &mut Tree, node_only: bool) {
-        let root_node = tree.root.borrow_mut();
+        let root_node = tree.root.clone();
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         while i < dts.len() {
@@ -78,7 +77,7 @@ impl DtsParser {
 
                     i = i + 1;
                     // Update the root node content
-                    let node_size = DtsParser::parse_node(&dts[i..], root_node, node_only);
+                    let node_size = DtsParser::parse_node(&dts[i..], root_node.clone(), node_only);
                     i = i + node_size;
                     text.clear();
                 }
@@ -90,7 +89,7 @@ impl DtsParser {
         }
     }
 
-    fn parse_node(dts: &[u8], node: &mut Node, node_only: bool) -> usize {
+    fn parse_node(dts: &[u8], node: Arc<Mutex<Node>>, node_only: bool) -> usize {
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         let mut at_end = false;
@@ -103,16 +102,22 @@ impl DtsParser {
                     println!("found node {}", sub_node_name);
 
                     // If a sub_node with the name doesn't exist, create one
-                    if !node.sub_nodes.iter().any(|x| &x.name == sub_node_name) {
+                    if !node
+                        .lock()
+                        .unwrap()
+                        .sub_nodes
+                        .iter()
+                        .any(|x| &x.lock().unwrap().name == sub_node_name)
+                    {
                         let new_sub_node = Node::new(sub_node_name);
-                        node.add_sub_node(new_sub_node);
+                        node.lock().unwrap().add_sub_node(new_sub_node);
                     }
 
                     // Get the sub_node out and update
                     let sub_node = node
-                        .sub_nodes
-                        .iter_mut()
-                        .find(|x| &x.name == sub_node_name)
+                        .lock()
+                        .unwrap()
+                        .find_subnode_by_name(sub_node_name)
                         .unwrap();
 
                     i = i + 1;
@@ -137,7 +142,7 @@ impl DtsParser {
                     text.clear();
                     if !node_only {
                         let attr = Attribute::new_u8s(attr_name, attribute_value);
-                        node.add_attr(attr);
+                        node.lock().unwrap().add_attr(attr);
                     }
                 }
                 ';' => {
@@ -168,27 +173,31 @@ impl DtsParser {
                                 let sub_node_name = slices.next().unwrap();
                                 println!("delete node: {sub_node_name}");
                                 let sub_node_index = node
+                                    .lock()
+                                    .unwrap()
                                     .sub_nodes
                                     .iter()
-                                    .position(|x| x.name == sub_node_name)
+                                    .position(|x| x.lock().unwrap().name == sub_node_name)
                                     .unwrap();
-                                node.sub_nodes.remove(sub_node_index);
+                                node.lock().unwrap().sub_nodes.remove(sub_node_index);
                             } else if instruction == "/delete-property/" {
                                 let property_name = slices.next().unwrap();
                                 println!("delete property: {property_name}");
                                 let property_index = node
+                                    .lock()
+                                    .unwrap()
                                     .attributes
                                     .iter()
-                                    .position(|x| x.name == property_name)
+                                    .position(|x| x.lock().unwrap().name == property_name)
                                     .unwrap();
-                                node.attributes.remove(property_index);
+                                node.lock().unwrap().attributes.remove(property_index);
                             } else {
                                 panic!("unknown comipler directive {directive}")
                             }
                         } else {
                             println!("found attribute {} without value", attr_name);
                             let attr = Attribute::new_empty(&attr_name);
-                            node.add_attr(attr);
+                            node.lock().unwrap().add_attr(attr);
                         }
                     }
                 }
@@ -492,7 +501,7 @@ mod tests {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_0.dts").unwrap();
         let tree = DtsParser::parse(&dts);
-        assert_eq!(tree.root.attributes.len(), 4);
+        assert_eq!(tree.root.lock().unwrap().attributes.len(), 4);
     }
 
     #[test]
@@ -500,14 +509,17 @@ mod tests {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_2.dts").unwrap();
         let tree = DtsParser::parse(&dts);
-        assert_eq!(tree.root.sub_nodes.len(), 1);
-        let node_cpus = &tree.root.sub_nodes[0];
-        assert_eq!(node_cpus.sub_nodes.len(), 2);
-        assert_eq!(node_cpus.attributes.len(), 2);
-        let node_cpu0 = &node_cpus.sub_nodes[0];
-        assert_eq!(node_cpu0.sub_nodes.len(), 0);
-        assert_eq!(node_cpu0.attributes.len(), 4);
-        assert_eq!(node_cpu0.attributes[0].name, "device_type");
+        assert_eq!(tree.root.lock().unwrap().sub_nodes.len(), 1);
+        let node_cpus = &tree.root.lock().unwrap().sub_nodes[0];
+        assert_eq!(node_cpus.lock().unwrap().sub_nodes.len(), 2);
+        assert_eq!(node_cpus.lock().unwrap().attributes.len(), 2);
+        let node_cpu0 = &node_cpus.lock().unwrap().sub_nodes[0];
+        assert_eq!(node_cpu0.lock().unwrap().sub_nodes.len(), 0);
+        assert_eq!(node_cpu0.lock().unwrap().attributes.len(), 4);
+        assert_eq!(
+            node_cpu0.lock().unwrap().attributes[0].lock().unwrap().name,
+            "device_type"
+        );
     }
 
     #[test]
@@ -585,12 +597,37 @@ mod tests {
         let dts = std::fs::read("test/dts_5.dts").unwrap();
         let tree = DtsParser::parse(&dts);
 
-        assert_eq!(tree.root.sub_nodes.len(), 1);
-        assert_eq!(tree.root.sub_nodes[0].name, "node_b");
-        assert_eq!(tree.root.sub_nodes[0].attributes.len(), 1);
-        assert_eq!(tree.root.sub_nodes[0].attributes[0].name, "property_key_0");
+        assert_eq!(tree.root.lock().unwrap().sub_nodes.len(), 1);
         assert_eq!(
-            tree.root.sub_nodes[0].attributes[0].value,
+            tree.root.lock().unwrap().sub_nodes[0].lock().unwrap().name,
+            "node_b"
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().sub_nodes[0]
+                .lock()
+                .unwrap()
+                .attributes
+                .len(),
+            1
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().sub_nodes[0]
+                .lock()
+                .unwrap()
+                .attributes[0]
+                .lock()
+                .unwrap()
+                .name,
+            "property_key_0"
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().sub_nodes[0]
+                .lock()
+                .unwrap()
+                .attributes[0]
+                .lock()
+                .unwrap()
+                .value,
             vec!['v' as u8, '_' as u8, '0' as u8]
         );
     }

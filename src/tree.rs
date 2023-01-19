@@ -7,30 +7,34 @@ use crate::dts_generator::DtsGenerator;
 use crate::dts_parser::DtsParser;
 use crate::node::Node;
 use crate::reservation::Reservation;
+use std::sync::{Arc, Mutex};
 
 pub struct Tree {
     pub reservations: Vec<Reservation>,
-    pub root: Node,
+    pub root: Arc<Mutex<Node>>,
 }
 
 impl Tree {
     pub fn new(reservations: Vec<Reservation>, root: Node) -> Self {
         Tree {
             reservations,
-            root: root,
+            root: Arc::new(Mutex::new(root)),
         }
     }
 
-    pub fn find_node_with_label(&self, label: &str) -> Option<&Node> {
-        self.root.find_subnode_with_label(label)
+    pub fn find_node_with_label(&self, label: &str) -> Option<Arc<Mutex<Node>>> {
+        self.root.lock().unwrap().find_subnode_with_label(label)
     }
 
-    pub fn find_node_with_path(&self, path: &str) -> Option<&Node> {
+    pub fn find_node_with_path(&self, path: &str) -> Option<Arc<Mutex<Node>>> {
         let path: Vec<&str> = path.split("/").collect();
         if path.len() == 0 {
-            Some(&self.root)
+            Some(self.root.clone())
         } else {
-            self.root.find_subnode_with_path(path[1..].to_vec())
+            self.root
+                .lock()
+                .unwrap()
+                .find_subnode_with_path(path[1..].to_vec())
         }
     }
 
@@ -50,7 +54,7 @@ impl Tree {
         for reservation in &self.reservations {
             reservations.push(reservation.to_owned());
         }
-        DtbGenerator::from_tree(&self.root, reservations).generate()
+        DtbGenerator::from_tree(&self.root.lock().unwrap(), reservations).generate()
     }
 }
 
