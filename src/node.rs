@@ -3,12 +3,13 @@
 
 use crate::attribute::Attribute;
 use crate::dts_generator::DtsGenerator;
+use std::sync::{Arc, Mutex};
 
 pub struct Node {
     pub name: String,
     pub label: Option<String>,
-    pub attributes: Vec<Attribute>,
-    pub sub_nodes: Vec<Node>,
+    pub attributes: Vec<Arc<Mutex<Attribute>>>,
+    pub sub_nodes: Vec<Arc<Mutex<Node>>>,
 }
 
 impl Node {
@@ -22,30 +23,39 @@ impl Node {
     }
 
     pub fn add_attr(&mut self, attr: Attribute) {
-        self.attributes.push(attr);
+        self.attributes.push(Arc::new(Mutex::new(attr)));
     }
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
-        self.sub_nodes.push(sub_node);
+        self.sub_nodes.push(Arc::new(Mutex::new(sub_node)));
     }
 
-    pub fn find_attr(&self, name: &str) -> Option<&Attribute> {
+    pub fn find_attr(&self, name: &str) -> Option<Arc<Mutex<Attribute>>> {
         for attr in &self.attributes {
-            if name == &attr.name {
-                return Some(attr);
+            if name == attr.lock().unwrap().name {
+                return Some(attr.clone());
             }
         }
         None
     }
 
-    pub fn find_subnode_with_label(&self, label: &str) -> Option<&Node> {
+    pub fn find_subnode_by_name(&self, name: &str) -> Option<Arc<Mutex<Node>>> {
         for sub_node in &self.sub_nodes {
-            if let Some(sub_node_label) = &sub_node.label {
+            if sub_node.lock().unwrap().name == name {
+                return Some(sub_node.clone());
+            }
+        }
+        None
+    }
+
+    pub fn find_subnode_with_label(&self, label: &str) -> Option<Arc<Mutex<Node>>> {
+        for sub_node in &self.sub_nodes {
+            if let Some(sub_node_label) = &sub_node.lock().unwrap().label {
                 if sub_node_label == label {
-                    return Some(sub_node);
+                    return Some(sub_node.clone());
                 }
             }
-            let sub_node_with_label = sub_node.find_subnode_with_label(label);
+            let sub_node_with_label = sub_node.lock().unwrap().find_subnode_with_label(label);
             if sub_node_with_label.is_some() {
                 return sub_node_with_label;
             }
@@ -53,15 +63,18 @@ impl Node {
         None
     }
 
-    pub fn find_subnode_with_path(&self, path: Vec<&str>) -> Option<&Node> {
+    pub fn find_subnode_with_path(&self, path: Vec<&str>) -> Option<Arc<Mutex<Node>>> {
         for sub_node in &self.sub_nodes {
-            if sub_node.name == path[0] {
+            if sub_node.lock().unwrap().name == path[0] {
                 if path.len() == 1 {
                     // Found the matching node
-                    return Some(sub_node);
+                    return Some(sub_node.clone());
                 } else {
                     // There are more to match
-                    let sub_node_with_path = sub_node.find_subnode_with_path(path[1..].to_vec());
+                    let sub_node_with_path = sub_node
+                        .lock()
+                        .unwrap()
+                        .find_subnode_with_path(path[1..].to_vec());
                     if sub_node_with_path.is_some() {
                         return sub_node_with_path;
                     }

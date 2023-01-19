@@ -123,12 +123,12 @@ impl DtbGenerator<'_> {
         }
 
         for attr in node.attributes.iter() {
-            let mut attr_bytes = self.generate_attribute(attr);
+            let mut attr_bytes = self.generate_attribute(&attr.lock().unwrap());
             bytes.append(&mut attr_bytes);
         }
 
         for sub_node in node.sub_nodes.iter() {
-            let mut node_bytes = self.generate_node(sub_node);
+            let mut node_bytes = self.generate_node(&sub_node.lock().unwrap());
             bytes.append(&mut node_bytes);
         }
 
@@ -214,14 +214,26 @@ mod tests {
         let tree = Tree::new(vec![], root);
 
         // Generate the DTB
-        let mut dtb_generator = DtbGenerator::from_tree(&tree.root, vec![]);
+        let x = tree.root.lock().unwrap();
+
+        let mut dtb_generator = DtbGenerator::from_tree(&x, vec![]);
         let dtb_bytes = dtb_generator.generate();
 
         // Parse the generated DTB and check
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
-        assert_eq!(tree.root.name, "/");
-        assert_eq!(tree.root.attributes[0].name, "compatible");
-        assert_eq!(tree.root.attributes[0].value.len(), 17);
+        assert_eq!(tree.root.lock().unwrap().name, "/");
+        assert_eq!(
+            tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
+            "compatible"
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().attributes[0]
+                .lock()
+                .unwrap()
+                .value
+                .len(),
+            17
+        );
         let s = DtsGenerator::generate_tree(&tree);
         assert_eq!(s, "/dts-v1/;\n\n/ {\n\tcompatible = <0x6c 0x69 0x6e 0x75 0x78 0x2c 0x64 0x75 0x6d 0x6d 0x79 0x2d 0x76 0x69 0x72 0x74 0x0>;\n};\n");
     }
@@ -240,21 +252,61 @@ mod tests {
 
         // Check the tree structure
         let tree = Tree::new(vec![], root);
-        assert_eq!(tree.root.attributes[0].name, "compatible");
-        assert_eq!(tree.root.attributes[0].value.len(), 17);
-        assert_eq!(tree.root.attributes[1].name, "#address-cells");
         assert_eq!(
-            u32::from_be_bytes(tree.root.attributes[1].value[0..4].try_into().unwrap()),
+            tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
+            "compatible"
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().attributes[0]
+                .lock()
+                .unwrap()
+                .value
+                .len(),
+            17
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().attributes[1].lock().unwrap().name,
+            "#address-cells"
+        );
+        assert_eq!(
+            u32::from_be_bytes(
+                tree.root.lock().unwrap().attributes[1]
+                    .lock()
+                    .unwrap()
+                    .value[0..4]
+                    .try_into()
+                    .unwrap()
+            ),
             2u32
         );
-        assert_eq!(tree.root.attributes[2].name, "#size-cells");
         assert_eq!(
-            u32::from_be_bytes(tree.root.attributes[2].value[0..4].try_into().unwrap()),
+            tree.root.lock().unwrap().attributes[2].lock().unwrap().name,
+            "#size-cells"
+        );
+        assert_eq!(
+            u32::from_be_bytes(
+                tree.root.lock().unwrap().attributes[2]
+                    .lock()
+                    .unwrap()
+                    .value[0..4]
+                    .try_into()
+                    .unwrap()
+            ),
             2u32
         );
-        assert_eq!(tree.root.attributes[3].name, "interrupt-parent");
         assert_eq!(
-            u32::from_be_bytes(tree.root.attributes[3].value[0..4].try_into().unwrap()),
+            tree.root.lock().unwrap().attributes[3].lock().unwrap().name,
+            "interrupt-parent"
+        );
+        assert_eq!(
+            u32::from_be_bytes(
+                tree.root.lock().unwrap().attributes[3]
+                    .lock()
+                    .unwrap()
+                    .value[0..4]
+                    .try_into()
+                    .unwrap()
+            ),
             1u32
         );
 
@@ -282,9 +334,19 @@ mod tests {
 
         // Parse the generated DTB and check
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
-        assert_eq!(tree.root.name, "/");
-        assert_eq!(tree.root.attributes[0].name, "compatible");
-        assert_eq!(tree.root.attributes[0].value.len(), 17);
+        assert_eq!(tree.root.lock().unwrap().name, "/");
+        assert_eq!(
+            tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
+            "compatible"
+        );
+        assert_eq!(
+            tree.root.lock().unwrap().attributes[0]
+                .lock()
+                .unwrap()
+                .value
+                .len(),
+            17
+        );
         let s = DtsGenerator::generate_tree(&tree);
         assert_eq!(s, "/dts-v1/;\n\n/memreserve/ 0x0000000000000000 0x0000000000100000;\n/memreserve/ 0x0000000000100000 0x0000000000100000;\n/memreserve/ 0x0000000000200000 0x0000000000100000;\n\n/ {\n\tcompatible = <0x6c 0x69 0x6e 0x75 0x78 0x2c 0x64 0x75 0x6d 0x6d 0x79 0x2d 0x76 0x69 0x72 0x74 0x0>;\n};\n");
     }
@@ -299,7 +361,8 @@ mod tests {
 
         let tree = DtbParser::from_bytes(&buffer).parse();
 
-        let mut dtb_generator = DtbGenerator::from_tree(&tree.root, vec![]);
+        let x = tree.root.lock().unwrap();
+        let mut dtb_generator = DtbGenerator::from_tree(&x, vec![]);
         let dtb_bytes = dtb_generator.generate();
 
         // parse the generated DTB
