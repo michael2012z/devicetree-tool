@@ -61,7 +61,8 @@ impl DtsParser {
                             "detected /memreserve/: address = {:#018x}, length = {:#018x}",
                             address, length
                         );
-                        tree.reservations.push(Reservation::new(address, length));
+                        tree.reservations
+                            .push(Arc::new(Mutex::new(Reservation::new(address, length))));
                     } else {
                         panic!("unknown top-level statement: {statement}");
                     }
@@ -585,10 +586,10 @@ mod tests {
         let dts = std::fs::read("test/dts_4.dts").unwrap();
         let tree = DtsParser::parse(&dts);
         assert_eq!(tree.reservations.len(), 5);
-        assert_eq!(tree.reservations[0].address, 0x0);
-        assert_eq!(tree.reservations[0].length, 0x100000);
-        assert_eq!(tree.reservations[4].address, 0x400000);
-        assert_eq!(tree.reservations[4].length, 0x100000);
+        assert_eq!(tree.reservations[0].lock().unwrap().address, 0x0);
+        assert_eq!(tree.reservations[0].lock().unwrap().length, 0x100000);
+        assert_eq!(tree.reservations[4].lock().unwrap().address, 0x400000);
+        assert_eq!(tree.reservations[4].lock().unwrap().length, 0x100000);
     }
 
     #[test]

@@ -5,18 +5,19 @@ use crate::attribute::Attribute;
 use crate::dtb::DtbHeader;
 use crate::node::Node;
 use crate::reservation::Reservation;
+use std::sync::{Arc, Mutex};
 
 #[allow(dead_code)]
 pub struct DtbGenerator<'a> {
     header: DtbHeader,
-    reservations: Vec<Reservation>,
+    reservations: Vec<Arc<Mutex<Reservation>>>,
     strings_block: Vec<u8>,
     structure_block: Vec<u8>,
     root_node: &'a Node,
 }
 
 impl DtbGenerator<'_> {
-    pub fn from_tree(root_node: &Node, reservations: Vec<Reservation>) -> DtbGenerator {
+    pub fn from_tree(root_node: &Node, reservations: Vec<Arc<Mutex<Reservation>>>) -> DtbGenerator {
         let header = DtbHeader {
             magic: 0u32,
             total_size: 0u32,
@@ -152,9 +153,9 @@ impl DtbGenerator<'_> {
         let mut bytes: Vec<u8> = vec![];
         let reservations = &self.reservations;
         for reservation in reservations {
-            let address = reservation.address;
+            let address = reservation.lock().unwrap().address;
             let mut address = address.to_be_bytes().to_vec();
-            let length = reservation.length;
+            let length = reservation.lock().unwrap().length;
             let mut length = length.to_be_bytes().to_vec();
             bytes.append(&mut address);
             bytes.append(&mut length);
@@ -324,9 +325,9 @@ mod tests {
             vec![String::from("linux,dummy-virt")],
         ));
         let mut reservations = vec![];
-        reservations.push(Reservation::new(0x0, 0x100000));
-        reservations.push(Reservation::new(0x100000, 0x100000));
-        reservations.push(Reservation::new(0x200000, 0x100000));
+        reservations.push(Arc::new(Mutex::new(Reservation::new(0x0, 0x100000))));
+        reservations.push(Arc::new(Mutex::new(Reservation::new(0x100000, 0x100000))));
+        reservations.push(Arc::new(Mutex::new(Reservation::new(0x200000, 0x100000))));
 
         // Generate the DTB
         let mut dtb_generator = DtbGenerator::from_tree(&root, reservations);
