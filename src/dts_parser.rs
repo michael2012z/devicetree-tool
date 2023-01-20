@@ -25,7 +25,9 @@ impl DtsParser {
         let dts_string = DtsParser::pre_process(&dts_string, 8);
         let dts = dts_string.as_bytes();
 
+        self.parse_tree(dts, true);
         self.parse_tree(dts, false);
+
         let mut reservations_clone = vec![];
         for reservation in &self.tree.reservations {
             reservations_clone.push(reservation.clone());
@@ -88,6 +90,7 @@ impl DtsParser {
                     // Found node
                     let node_name =
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
+
                     // The node name must be "/", fail otherwise
                     if node_name != "/" {
                         panic!("node {node_name} is not expected")
@@ -119,15 +122,27 @@ impl DtsParser {
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
                     println!("found node {}", sub_node_name);
 
+                    let (label, sub_node_name) = if sub_node_name.contains(":") {
+                        let parts: Vec<&str> = sub_node_name.split(":").collect();
+                        (Some(String::from(parts[0])), String::from(parts[1]))
+                    } else {
+                        (None, String::from(sub_node_name.trim()))
+                    };
+
                     // If a sub_node with the name doesn't exist, create one
                     if !node
                         .lock()
                         .unwrap()
                         .sub_nodes
                         .iter()
-                        .any(|x| &x.lock().unwrap().name == sub_node_name)
+                        .any(|x| &x.lock().unwrap().name == &sub_node_name)
                     {
-                        let new_sub_node = Node::new(sub_node_name);
+                        let new_sub_node = if let Some(label) = label {
+                            Node::new_label(&sub_node_name, &label)
+                        } else {
+                            Node::new(&sub_node_name)
+                        };
+
                         node.lock().unwrap().add_sub_node(new_sub_node);
                     }
 
@@ -135,7 +150,7 @@ impl DtsParser {
                     let sub_node = node
                         .lock()
                         .unwrap()
-                        .find_subnode_by_name(sub_node_name)
+                        .find_subnode_by_name(&sub_node_name)
                         .unwrap();
 
                     i = i + 1;
@@ -155,7 +170,7 @@ impl DtsParser {
                     println!("found attribute {} with value:", attr_name);
                     i = i + 1;
                     let (attribute_value_size, attribute_value) =
-                        self.parse_attribute_value(&dts[i..]);
+                        self.parse_attribute_value(&dts[i..], node_only);
                     i = i + attribute_value_size;
                     text.clear();
                     if !node_only {
@@ -228,7 +243,7 @@ impl DtsParser {
         panic!("attribute not ended");
     }
 
-    fn parse_attribute_value(&mut self, dts: &[u8]) -> (usize, Vec<u8>) {
+    fn parse_attribute_value(&mut self, dts: &[u8], ignore_content: bool) -> (usize, Vec<u8>) {
         let mut value: Vec<u8> = vec![];
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -255,9 +270,11 @@ impl DtsParser {
                     }
                     value_type = 0;
 
-                    let cells_value = self.parse_attribute_value_cells(&text);
-                    for d in cells_value {
-                        value.push(d)
+                    if ignore_content == false {
+                        let cells_value = self.parse_attribute_value_cells(&text);
+                        for d in cells_value {
+                            value.push(d)
+                        }
                     }
                     text.clear();
                 }
@@ -268,6 +285,7 @@ impl DtsParser {
                             "found bytes-start while parsing another attribute type {value_type}"
                         )
                     }
+
                     value_type = 2;
                     text.clear();
                 }
@@ -277,9 +295,11 @@ impl DtsParser {
                     }
                     value_type = 0;
 
-                    let bytes_value = DtsParser::parse_attribute_value_bytes(&text);
-                    for d in bytes_value {
-                        value.push(d)
+                    if ignore_content == false {
+                        let bytes_value = DtsParser::parse_attribute_value_bytes(&text);
+                        for d in bytes_value {
+                            value.push(d)
+                        }
                     }
                     text.clear();
                 }
@@ -292,9 +312,11 @@ impl DtsParser {
                     } else if value_type == 3 {
                         // At the end of a string
                         value_type = 0;
-                        let string_value = DtsParser::parse_attribute_value_string(&text);
-                        for d in string_value {
-                            value.push(d)
+                        if ignore_content == false {
+                            let string_value = DtsParser::parse_attribute_value_string(&text);
+                            for d in string_value {
+                                value.push(d)
+                            }
                         }
                         text.clear();
                     } else {
@@ -324,7 +346,7 @@ impl DtsParser {
     fn parse_attribute_value_cells(&mut self, text: &[u8]) -> Vec<u8> {
         let mut value: Vec<u8> = vec![];
         println!("cells: {}", String::from_utf8_lossy(text));
-        println!("cells:");
+
         for num in String::from_utf8_lossy(text).split_whitespace() {
             // A value could be in format:
             //   * &LABEL
@@ -337,9 +359,8 @@ impl DtsParser {
                     // Get the full path
                     let ref_node_path = &num[2..(num.len() - 1)];
                     let node_to_ref = self.tree.find_node_with_path(ref_node_path).unwrap();
-                    let phandle = if let Some(phandle_attr) =
-                        node_to_ref.lock().unwrap().find_attr("phandle")
-                    {
+                    let phandle_attr = node_to_ref.lock().unwrap().find_attr("phandle");
+                    let phandle = if let Some(phandle_attr) = phandle_attr {
                         u32::from_be_bytes(
                             phandle_attr.lock().unwrap().value[0..4].try_into().unwrap(),
                         )
@@ -357,9 +378,10 @@ impl DtsParser {
                     // It should be a label
                     let label = &num[1..];
                     let node_to_ref = self.tree.find_node_with_label(label).unwrap();
-                    let phandle = if let Some(phandle_attr) =
-                        node_to_ref.lock().unwrap().find_attr("phandle")
-                    {
+
+                    let phandle_attr = node_to_ref.lock().unwrap().find_attr("phandle");
+
+                    let phandle = if let Some(phandle_attr) = phandle_attr {
                         u32::from_be_bytes(
                             phandle_attr.lock().unwrap().value[0..4].try_into().unwrap(),
                         )
@@ -685,5 +707,28 @@ mod tests {
         let dts = DtsParser::pre_process(&dts, 8);
         assert_eq!(dts.find("/include/").is_none(), true);
         assert_eq!(dts.find("#address-cells").is_some(), true);
+    }
+
+    #[test]
+    fn test_dts_parse_label() {
+        let dts = std::fs::read_to_string("test/dts_7.dts").unwrap();
+        let tree = Tree::from_dts_bytes(dts.as_bytes());
+        assert_eq!(
+            tree.root.lock().unwrap().sub_nodes[2]
+                .lock()
+                .unwrap()
+                .label
+                .as_ref()
+                .unwrap(),
+            "interrupt_controller"
+        );
+        let attr = tree.root.lock().unwrap().find_attr("interrupt-parent");
+        assert_eq!(attr.is_some(), true);
+        let phandle = u32::from_be_bytes(
+            attr.unwrap().lock().unwrap().value[0..4]
+                .try_into()
+                .unwrap(),
+        );
+        assert_eq!(phandle, 0);
     }
 }
