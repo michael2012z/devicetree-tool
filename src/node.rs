@@ -22,6 +22,15 @@ impl Node {
         }
     }
 
+    pub fn new_label(name: &str, label: &str) -> Self {
+        Node {
+            name: String::from(name),
+            label: Some(String::from(label)),
+            attributes: Vec::new(),
+            sub_nodes: Vec::new(),
+        }
+    }
+
     pub fn add_attr(&mut self, attr: Attribute) {
         self.attributes.push(Arc::new(Mutex::new(attr)));
     }

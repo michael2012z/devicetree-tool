@@ -1,0 +1,28 @@
+/dts-v1/;
+
+/ {
+	compatible = "linux,dummy-virt";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	interrupt-parent = <&interrupt_controller>;
+
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x1 0x0>;
+	};
+
+	chosen {
+		bootargs = "keep_bootcon console=ttyAMA0 reboot=k panic=1 root=/dev/vda1 rw earlycon=pl011,mmio,0x09000000";
+	};
+
+	interrupt_controller: intc {
+		compatible = "arm,gic-v3";
+		interrupt-controller;
+		#interrupt-cells = <0x3>;
+		reg = <0x0 0x8ff0000 0x0 0x10000 0x0 0x8cf0000 0x0 0x300000>;
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+		ranges;
+		interrupts = <0x1 0x9 0x4>;
+	};
+};
