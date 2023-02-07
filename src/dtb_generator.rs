@@ -110,7 +110,11 @@ impl DtbGenerator<'_> {
 
     fn generate_node(&mut self, node: &Node) -> Vec<u8> {
         let mut token = 1u32.to_be_bytes().to_vec();
-        let mut name = node.name.clone().as_bytes().to_owned();
+        let mut name = if &node.name != "/" {
+            node.name.clone().as_bytes().to_owned()
+        } else {
+            vec![]
+        };
         name.push(0u8);
 
         let mut bytes: Vec<u8> = vec![];
@@ -222,7 +226,7 @@ mod tests {
 
         // Parse the generated DTB and check
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
-        assert_eq!(tree.root.lock().unwrap().name, "/");
+        assert_eq!(tree.root.lock().unwrap().name, "");
         assert_eq!(
             tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
             "compatible"
@@ -313,13 +317,13 @@ mod tests {
 
         // Check the generated DTS text
         let s = DtsGenerator::generate_tree(&tree);
-        assert_eq!(s, "/dts-v1/;\n\n{\n\tcompatible = <0x6c 0x69 0x6e 0x75 0x78 0x2c 0x64 0x75 0x6d 0x6d 0x79 0x2d 0x76 0x69 0x72 0x74 0x0>;\n\t#address-cells = <0x0 0x0 0x0 0x2>;\n\t#size-cells = <0x0 0x0 0x0 0x2>;\n\tinterrupt-parent = <0x0 0x0 0x0 0x1>;\n};\n");
+        assert_eq!(s, "/dts-v1/;\n\n/ {\n\tcompatible = <0x6c 0x69 0x6e 0x75 0x78 0x2c 0x64 0x75 0x6d 0x6d 0x79 0x2d 0x76 0x69 0x72 0x74 0x0>;\n\t#address-cells = <0x0 0x0 0x0 0x2>;\n\t#size-cells = <0x0 0x0 0x0 0x2>;\n\tinterrupt-parent = <0x0 0x0 0x0 0x1>;\n};\n");
     }
 
     #[test]
     fn test_dtb_generate_2() {
         // Build a simple device tree
-        let mut root = Node::new("/");
+        let mut root = Node::new("");
         root.add_attr(Attribute::new_strings(
             "compatible",
             vec![String::from("linux,dummy-virt")],
@@ -335,7 +339,7 @@ mod tests {
 
         // Parse the generated DTB and check
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
-        assert_eq!(tree.root.lock().unwrap().name, "/");
+        assert_eq!(tree.root.lock().unwrap().name, "");
         assert_eq!(
             tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
             "compatible"
