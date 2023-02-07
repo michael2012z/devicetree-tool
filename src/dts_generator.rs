@@ -30,6 +30,8 @@ impl DtsGenerator {
         s.push_str(&format!("{indents}"));
         if node.name.len() > 0 {
             s.push_str(&format!("{} ", node.name));
+        } else {
+            s.push_str("/ ");
         }
         s.push_str("{\n");
         for attr in &node.attributes {
