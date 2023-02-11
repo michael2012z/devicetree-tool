@@ -428,7 +428,10 @@ impl DtsParser {
 
     fn parse_attribute_value_string(text: &[u8]) -> Vec<u8> {
         println!("string: {}", String::from_utf8_lossy(text));
-        text.to_vec()
+        let mut bytes = text.to_vec();
+        // Append the terminator
+        bytes.push(0);
+        bytes
     }
 
     fn pre_process(dts: &str, inclusion_depth: usize) -> String {
@@ -697,7 +700,7 @@ mod tests {
                 .lock()
                 .unwrap()
                 .value,
-            vec!['v' as u8, '_' as u8, '0' as u8]
+            vec!['v' as u8, '_' as u8, '0' as u8, 0 as u8]
         );
     }
 
