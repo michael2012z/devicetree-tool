@@ -2,26 +2,26 @@
 
 / {
 	compatible = "linux,dummy-virt";
-	#address-cells = <0x2>;
-	#size-cells = <0x2>;
-	interrupt-parent = <0x1>;
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+	interrupt-parent = <0x01>;
 
 	cpus {
-		#address-cells = <0x2>;
-		#size-cells = <0x0>;
+		#address-cells = <0x02>;
+		#size-cells = <0x00>;
 
 		cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,arm-v8";
 			enable-method = "psci";
-			reg = <0x0 0x0>;
+			reg = <0x00 0x00>;
 		};
 
 		cpu@1 {
 			device_type = "cpu";
 			compatible = "arm,arm-v8";
 			enable-method = "psci";
-			reg = <0x0 0x1>;
+			reg = <0x00 0x01>;
 		};
 	};
 };
