@@ -1,0 +1,27 @@
+/dts-v1/;
+
+/ {
+	compatible = "linux,dummy-virt";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	interrupt-parent = <0x1>;
+
+	cpus {
+		#address-cells = <0x2>;
+		#size-cells = <0x0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,arm-v8";
+			enable-method = "psci";
+			reg = <0x0 0x0>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,arm-v8";
+			enable-method = "psci";
+			reg = <0x0 0x1>;
+		};
+	};
+};
