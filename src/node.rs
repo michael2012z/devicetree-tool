@@ -1,14 +1,14 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::attribute::Attribute;
 use crate::dts_generator::DtsGenerator;
+use crate::property::Property;
 use std::sync::{Arc, Mutex};
 
 pub struct Node {
     pub name: String,
     pub label: Option<String>,
-    pub attributes: Vec<Arc<Mutex<Attribute>>>,
+    pub properties: Vec<Arc<Mutex<Property>>>,
     pub sub_nodes: Vec<Arc<Mutex<Node>>>,
 }
 
@@ -17,7 +17,7 @@ impl Node {
         Node {
             name: String::from(name),
             label: None,
-            attributes: Vec::new(),
+            properties: Vec::new(),
             sub_nodes: Vec::new(),
         }
     }
@@ -26,23 +26,23 @@ impl Node {
         Node {
             name: String::from(name),
             label: Some(String::from(label)),
-            attributes: Vec::new(),
+            properties: Vec::new(),
             sub_nodes: Vec::new(),
         }
     }
 
-    pub fn add_attr(&mut self, attr: Attribute) {
-        self.attributes.push(Arc::new(Mutex::new(attr)));
+    pub fn add_property(&mut self, prop: Property) {
+        self.properties.push(Arc::new(Mutex::new(prop)));
     }
 
     pub fn add_sub_node(&mut self, sub_node: Node) {
         self.sub_nodes.push(Arc::new(Mutex::new(sub_node)));
     }
 
-    pub fn find_attr(&self, name: &str) -> Option<Arc<Mutex<Attribute>>> {
-        for attr in &self.attributes {
-            if name == attr.lock().unwrap().name {
-                return Some(attr.clone());
+    pub fn find_property(&self, name: &str) -> Option<Arc<Mutex<Property>>> {
+        for prop in &self.properties {
+            if name == prop.lock().unwrap().name {
+                return Some(prop.clone());
             }
         }
         None
@@ -104,12 +104,12 @@ impl std::fmt::Display for Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::attribute::Attribute;
+    use crate::property::Property;
 
     #[test]
     fn test_node_empty() {
         let node = Node::new("node");
-        assert_eq!(node.attributes.len(), 0);
+        assert_eq!(node.properties.len(), 0);
         assert_eq!(node.sub_nodes.len(), 0);
     }
 
@@ -131,22 +131,22 @@ mod tests {
     }
 
     #[test]
-    fn test_node_attributes() {
+    fn test_node_properties() {
         let mut node = Node::new("node");
-        node.add_attr(Attribute::new_empty("attr0"));
-        node.add_attr(Attribute::new_u32("attr1", 42));
-        assert_eq!(node.attributes.len(), 2);
+        node.add_property(Property::new_empty("prop0"));
+        node.add_property(Property::new_u32("prop1", 42));
+        assert_eq!(node.properties.len(), 2);
     }
 
     #[test]
-    fn test_attribute_print() {
+    fn test_property_print() {
         let mut node = Node::new("node");
-        node.add_attr(Attribute::new_u32("attr", 42));
+        node.add_property(Property::new_u32("prop", 42));
         let mut sub_node = Node::new("node");
-        sub_node.add_attr(Attribute::new_u32("attr", 12));
+        sub_node.add_property(Property::new_u32("prop", 12));
         node.add_sub_node(sub_node);
 
         let printing = format!("{}", node);
-        assert_eq!(&printing, "node {\n\tattr = <0x0 0x0 0x0 0x2a>;\n\n\tnode {\n\t\tattr = <0x0 0x0 0x0 0xc>;\n\t};\n};\n");
+        assert_eq!(&printing, "node {\n\tprop = <0x0 0x0 0x0 0x2a>;\n\n\tnode {\n\t\tprop = <0x0 0x0 0x0 0xc>;\n\t};\n};\n");
     }
 }
