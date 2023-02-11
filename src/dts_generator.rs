@@ -1,17 +1,17 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::{attribute::Attribute, node::Node, reservation::Reservation, tree::Tree, utils::Utils};
+use crate::{node::Node, property::Property, reservation::Reservation, tree::Tree, utils::Utils};
 
 pub struct DtsGenerator {}
 
 impl DtsGenerator {
-    pub fn generate_attribute(attribute: &Attribute, indent_level: u32) -> String {
-        let mut s = String::from(format!("{}{}", Utils::indent(indent_level), attribute.name));
-        if attribute.value.len() > 0 {
+    pub fn generate_property(property: &Property, indent_level: u32) -> String {
+        let mut s = String::from(format!("{}{}", Utils::indent(indent_level), property.name));
+        if property.value.len() > 0 {
             s.push_str(" = <");
-            for i in 0..attribute.value.len() {
-                let d = attribute.value[i];
+            for i in 0..property.value.len() {
+                let d = property.value[i];
                 if i > 0 {
                     s.push(' ')
                 }
@@ -34,9 +34,9 @@ impl DtsGenerator {
             s.push_str("/ ");
         }
         s.push_str("{\n");
-        for attr in &node.attributes {
-            s.push_str(&DtsGenerator::generate_attribute(
-                &attr.clone().lock().unwrap(),
+        for prop in &node.properties {
+            s.push_str(&DtsGenerator::generate_property(
+                &prop.clone().lock().unwrap(),
                 indent_level + 1,
             ));
             s.push_str("\n");
@@ -84,76 +84,76 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_dts_generate_attribute_none() {
-        let attr = Attribute::new_empty("attr");
-        assert_eq!(DtsGenerator::generate_attribute(&attr, 0), "attr;");
+    fn test_dts_generate_property_none() {
+        let prop = Property::new_empty("prop");
+        assert_eq!(DtsGenerator::generate_property(&prop, 0), "prop;");
     }
 
     #[test]
-    fn test_dts_generate_attribute_u32() {
-        let attr = Attribute::new_u32("attr", 42);
+    fn test_dts_generate_property_u32() {
+        let prop = Property::new_u32("prop", 42);
         assert_eq!(
-            DtsGenerator::generate_attribute(&attr, 0),
-            "attr = <0x0 0x0 0x0 0x2a>;"
+            DtsGenerator::generate_property(&prop, 0),
+            "prop = <0x0 0x0 0x0 0x2a>;"
         );
     }
 
     #[test]
-    fn test_dts_generate_attribute_strs() {
+    fn test_dts_generate_property_strs() {
         let string1 = String::from("hello");
         let string2 = String::from("abc");
         let strs = vec![string1, string2];
-        let attr = Attribute::new_strings("attr", strs);
+        let prop = Property::new_strings("prop", strs);
         assert_eq!(
-            DtsGenerator::generate_attribute(&attr, 0),
-            "attr = <0x68 0x65 0x6c 0x6c 0x6f 0x0 0x61 0x62 0x63 0x0>;"
+            DtsGenerator::generate_property(&prop, 0),
+            "prop = <0x68 0x65 0x6c 0x6c 0x6f 0x0 0x61 0x62 0x63 0x0>;"
         );
     }
 
     #[test]
-    fn test_dts_generate_attribute_str() {
+    fn test_dts_generate_property_str() {
         let s = String::from("hello abc");
-        let attr = Attribute::new_string("attr", s);
+        let prop = Property::new_string("prop", s);
         assert_eq!(
-            DtsGenerator::generate_attribute(&attr, 0),
-            "attr = <0x68 0x65 0x6c 0x6c 0x6f 0x20 0x61 0x62 0x63 0x0>;"
+            DtsGenerator::generate_property(&prop, 0),
+            "prop = <0x68 0x65 0x6c 0x6c 0x6f 0x20 0x61 0x62 0x63 0x0>;"
         );
     }
 
     #[test]
-    fn test_dts_generate_attribute_bytes() {
+    fn test_dts_generate_property_bytes() {
         let bytes = vec![0u8, 1u8, 2u8, 3u8];
-        let attr = Attribute::new_u8s("attr", bytes);
+        let prop = Property::new_u8s("prop", bytes);
         assert_eq!(
-            DtsGenerator::generate_attribute(&attr, 0),
-            "attr = <0x0 0x1 0x2 0x3>;"
+            DtsGenerator::generate_property(&prop, 0),
+            "prop = <0x0 0x1 0x2 0x3>;"
         );
     }
 
     #[test]
     fn test_dts_generate_node() {
-        let attr = Attribute::new_u32("attr", 42);
+        let prop = Property::new_u32("prop", 42);
         let mut node = Node::new("node");
-        node.add_attr(attr);
+        node.add_property(prop);
         assert_eq!(
             DtsGenerator::generate_node(&node, 0),
-            "node {\n\tattr = <0x0 0x0 0x0 0x2a>;\n};"
+            "node {\n\tprop = <0x0 0x0 0x0 0x2a>;\n};"
         );
     }
 
     #[test]
     fn test_dts_generate_sub_node() {
-        let attr = Attribute::new_u32("attr1", 42);
+        let prop = Property::new_u32("prop1", 42);
         let mut node = Node::new("node");
-        node.add_attr(attr);
+        node.add_property(prop);
 
         let mut sub_node = Node::new("sub_node");
-        sub_node.add_attr(Attribute::new_u32("attr2", 99));
+        sub_node.add_property(Property::new_u32("prop2", 99));
 
         node.add_sub_node(sub_node);
         assert_eq!(
             DtsGenerator::generate_node(&node, 0),
-            "node {\n\tattr1 = <0x0 0x0 0x0 0x2a>;\n\n\tsub_node {\n\t\tattr2 = <0x0 0x0 0x0 0x63>;\n\t};\n};"
+            "node {\n\tprop1 = <0x0 0x0 0x0 0x2a>;\n\n\tsub_node {\n\t\tprop2 = <0x0 0x0 0x0 0x63>;\n\t};\n};"
         );
     }
 

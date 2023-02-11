@@ -1,9 +1,9 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::attribute::Attribute;
 use crate::dtb::DtbHeader;
 use crate::node::Node;
+use crate::property::Property;
 use crate::reservation::Reservation;
 use crate::tree::Tree;
 
@@ -173,9 +173,9 @@ impl DtbParser {
                 }
                 3 => {
                     println!("FDT_PROP at 0x{:x}", pos - 4);
-                    let (prop_len, attribute) = self.parse_structure_prop(&struct_block[pos..]);
+                    let (prop_len, property) = self.parse_structure_prop(&struct_block[pos..]);
                     pos = pos + prop_len;
-                    node.add_attr(attribute);
+                    node.add_property(property);
                 }
                 4 => {
                     println!("FDT_NOP at 0x{:x}", pos - 4);
@@ -188,7 +188,7 @@ impl DtbParser {
         panic!("Node not closed")
     }
 
-    fn parse_structure_prop(&self, struct_block: &[u8]) -> (usize, Attribute) {
+    fn parse_structure_prop(&self, struct_block: &[u8]) -> (usize, Property) {
         let mut pos = 0usize;
         let prop_len = u32::from_be_bytes(struct_block[pos..(pos + 4)].try_into().unwrap());
         pos = pos + 4;
@@ -201,9 +201,9 @@ impl DtbParser {
             "Property: name_pos 0x{:x}, len 0x{:x}, data {:#?}, next pos 0x{:x}",
             prop_nameoff, prop_len, prop_data, pos
         );
-        let attr_name = self.get_string(prop_nameoff);
-        let attribute = Attribute::new_u8s(&attr_name, prop_data.to_owned());
-        (pos, attribute)
+        let prop_name = self.get_string(prop_nameoff);
+        let property = Property::new_u8s(&prop_name, prop_data.to_owned());
+        (pos, property)
     }
 }
 

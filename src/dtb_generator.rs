@@ -1,9 +1,9 @@
 // Copyright (c) 2022, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::attribute::Attribute;
 use crate::dtb::DtbHeader;
 use crate::node::Node;
+use crate::property::Property;
 use crate::reservation::Reservation;
 use std::sync::{Arc, Mutex};
 
@@ -86,17 +86,17 @@ impl DtbGenerator<'_> {
         bytes
     }
 
-    fn generate_attribute(&mut self, attr: &Attribute) -> Vec<u8> {
+    fn generate_property(&mut self, prop: &Property) -> Vec<u8> {
         let mut token = 3u32.to_be_bytes().to_vec();
-        let mut len = (attr.value.len() as u32).to_be_bytes().to_vec();
-        let name = attr.name.clone();
+        let mut len = (prop.value.len() as u32).to_be_bytes().to_vec();
+        let name = prop.name.clone();
         let mut nameoff = self.add_string(&name).to_be_bytes().to_vec();
 
         let mut bytes: Vec<u8> = vec![];
         bytes.append(&mut token);
         bytes.append(&mut len);
         bytes.append(&mut nameoff);
-        for d in &attr.value {
+        for d in &prop.value {
             bytes.push(d.to_owned())
         }
 
@@ -127,9 +127,9 @@ impl DtbGenerator<'_> {
             bytes.push(0u8);
         }
 
-        for attr in node.attributes.iter() {
-            let mut attr_bytes = self.generate_attribute(&attr.lock().unwrap());
-            bytes.append(&mut attr_bytes);
+        for prop in node.properties.iter() {
+            let mut prop_bytes = self.generate_property(&prop.lock().unwrap());
+            bytes.append(&mut prop_bytes);
         }
 
         for sub_node in node.sub_nodes.iter() {
@@ -212,7 +212,7 @@ mod tests {
     fn test_dtb_generate_0() {
         // Build a simple device tree
         let mut root = Node::new("/");
-        root.add_attr(Attribute::new_strings(
+        root.add_property(Property::new_strings(
             "compatible",
             vec![String::from("linux,dummy-virt")],
         ));
@@ -228,11 +228,11 @@ mod tests {
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
         assert_eq!(tree.root.lock().unwrap().name, "");
         assert_eq!(
-            tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
+            tree.root.lock().unwrap().properties[0].lock().unwrap().name,
             "compatible"
         );
         assert_eq!(
-            tree.root.lock().unwrap().attributes[0]
+            tree.root.lock().unwrap().properties[0]
                 .lock()
                 .unwrap()
                 .value
@@ -247,22 +247,22 @@ mod tests {
     fn test_dtb_generate_1() {
         // Build a simple device tree
         let mut root = Node::new("");
-        root.add_attr(Attribute::new_strings(
+        root.add_property(Property::new_strings(
             "compatible",
             vec![String::from("linux,dummy-virt")],
         ));
-        root.add_attr(Attribute::new_u32("#address-cells", 2u32));
-        root.add_attr(Attribute::new_u32("#size-cells", 2u32));
-        root.add_attr(Attribute::new_u32("interrupt-parent", 1u32));
+        root.add_property(Property::new_u32("#address-cells", 2u32));
+        root.add_property(Property::new_u32("#size-cells", 2u32));
+        root.add_property(Property::new_u32("interrupt-parent", 1u32));
 
         // Check the tree structure
         let tree = Tree::new(vec![], root);
         assert_eq!(
-            tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
+            tree.root.lock().unwrap().properties[0].lock().unwrap().name,
             "compatible"
         );
         assert_eq!(
-            tree.root.lock().unwrap().attributes[0]
+            tree.root.lock().unwrap().properties[0]
                 .lock()
                 .unwrap()
                 .value
@@ -270,12 +270,12 @@ mod tests {
             17
         );
         assert_eq!(
-            tree.root.lock().unwrap().attributes[1].lock().unwrap().name,
+            tree.root.lock().unwrap().properties[1].lock().unwrap().name,
             "#address-cells"
         );
         assert_eq!(
             u32::from_be_bytes(
-                tree.root.lock().unwrap().attributes[1]
+                tree.root.lock().unwrap().properties[1]
                     .lock()
                     .unwrap()
                     .value[0..4]
@@ -285,12 +285,12 @@ mod tests {
             2u32
         );
         assert_eq!(
-            tree.root.lock().unwrap().attributes[2].lock().unwrap().name,
+            tree.root.lock().unwrap().properties[2].lock().unwrap().name,
             "#size-cells"
         );
         assert_eq!(
             u32::from_be_bytes(
-                tree.root.lock().unwrap().attributes[2]
+                tree.root.lock().unwrap().properties[2]
                     .lock()
                     .unwrap()
                     .value[0..4]
@@ -300,12 +300,12 @@ mod tests {
             2u32
         );
         assert_eq!(
-            tree.root.lock().unwrap().attributes[3].lock().unwrap().name,
+            tree.root.lock().unwrap().properties[3].lock().unwrap().name,
             "interrupt-parent"
         );
         assert_eq!(
             u32::from_be_bytes(
-                tree.root.lock().unwrap().attributes[3]
+                tree.root.lock().unwrap().properties[3]
                     .lock()
                     .unwrap()
                     .value[0..4]
@@ -324,7 +324,7 @@ mod tests {
     fn test_dtb_generate_2() {
         // Build a simple device tree
         let mut root = Node::new("");
-        root.add_attr(Attribute::new_strings(
+        root.add_property(Property::new_strings(
             "compatible",
             vec![String::from("linux,dummy-virt")],
         ));
@@ -341,11 +341,11 @@ mod tests {
         let tree = DtbParser::from_bytes(&dtb_bytes).parse();
         assert_eq!(tree.root.lock().unwrap().name, "");
         assert_eq!(
-            tree.root.lock().unwrap().attributes[0].lock().unwrap().name,
+            tree.root.lock().unwrap().properties[0].lock().unwrap().name,
             "compatible"
         );
         assert_eq!(
-            tree.root.lock().unwrap().attributes[0]
+            tree.root.lock().unwrap().properties[0]
                 .lock()
                 .unwrap()
                 .value
