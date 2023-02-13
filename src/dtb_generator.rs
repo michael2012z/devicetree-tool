@@ -212,10 +212,7 @@ mod tests {
     fn test_dtb_generate_0() {
         // Build a simple device tree
         let mut root = Node::new("/");
-        root.add_property(Property::new_strings(
-            "compatible",
-            vec![String::from("linux,dummy-virt")],
-        ));
+        root.add_property(Property::new_strs("compatible", vec!["linux,dummy-virt"]));
         let tree = Tree::new(vec![], root);
 
         // Generate the DTB
@@ -247,10 +244,7 @@ mod tests {
     fn test_dtb_generate_1() {
         // Build a simple device tree
         let mut root = Node::new("");
-        root.add_property(Property::new_strings(
-            "compatible",
-            vec![String::from("linux,dummy-virt")],
-        ));
+        root.add_property(Property::new_strs("compatible", vec!["linux,dummy-virt"]));
         root.add_property(Property::new_u32("#address-cells", 2u32));
         root.add_property(Property::new_u32("#size-cells", 2u32));
         root.add_property(Property::new_u32("interrupt-parent", 1u32));
@@ -324,10 +318,7 @@ mod tests {
     fn test_dtb_generate_2() {
         // Build a simple device tree
         let mut root = Node::new("");
-        root.add_property(Property::new_strings(
-            "compatible",
-            vec![String::from("linux,dummy-virt")],
-        ));
+        root.add_property(Property::new_strs("compatible", vec!["linux,dummy-virt"]));
         let mut reservations = vec![];
         reservations.push(Arc::new(Mutex::new(Reservation::new(0x0, 0x100000))));
         reservations.push(Arc::new(Mutex::new(Reservation::new(0x100000, 0x100000))));

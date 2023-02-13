@@ -100,10 +100,8 @@ mod tests {
 
     #[test]
     fn test_dts_generate_property_strs() {
-        let string1 = String::from("hello");
-        let string2 = String::from("abc");
-        let strs = vec![string1, string2];
-        let prop = Property::new_strings("prop", strs);
+        let strs = vec!["hello", "abc"];
+        let prop = Property::new_strs("prop", strs);
         assert_eq!(
             DtsGenerator::generate_property(&prop, 0),
             "prop = <0x68 0x65 0x6c 0x6c 0x6f 0x0 0x61 0x62 0x63 0x0>;"
@@ -112,8 +110,7 @@ mod tests {
 
     #[test]
     fn test_dts_generate_property_str() {
-        let s = String::from("hello abc");
-        let prop = Property::new_string("prop", s);
+        let prop = Property::new_str("prop", "hello abc");
         assert_eq!(
             DtsGenerator::generate_property(&prop, 0),
             "prop = <0x68 0x65 0x6c 0x6c 0x6f 0x20 0x61 0x62 0x63 0x0>;"
