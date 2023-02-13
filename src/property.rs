@@ -180,6 +180,7 @@ impl Property {
 }
 
 impl std::fmt::Display for Property {
+    /// Print a `Property` in the format of DTS
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = DtsGenerator::generate_property(self, 0);
         writeln!(f, "{s}")

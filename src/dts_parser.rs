@@ -138,7 +138,7 @@ impl DtsParser {
                         .any(|x| &x.lock().unwrap().name == &sub_node_name)
                     {
                         let new_sub_node = if let Some(label) = label {
-                            Node::new_label(&sub_node_name, &label)
+                            Node::new_with_label(&sub_node_name, &label)
                         } else {
                             Node::new(&sub_node_name)
                         };
