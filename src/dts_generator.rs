@@ -28,6 +28,11 @@ impl DtsGenerator {
         let mut s = String::new();
         let indents = Utils::indent(indent_level);
         s.push_str(&format!("{indents}"));
+
+        if let Some(label) = &node.label {
+            s.push_str(&format!("{}: ", label));
+        }
+
         if node.name.len() > 0 {
             s.push_str(&format!("{} ", node.name));
         } else {

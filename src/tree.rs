@@ -27,7 +27,7 @@ impl Tree {
     }
 
     pub fn find_node_with_label(&self, label: &str) -> Option<Arc<Mutex<Node>>> {
-        self.root.lock().unwrap().find_subnode_with_label(label)
+        self.root.lock().unwrap().find_subnode_by_label(label)
     }
 
     pub fn find_node_with_path(&self, path: &str) -> Option<Arc<Mutex<Node>>> {
@@ -38,7 +38,7 @@ impl Tree {
             self.root
                 .lock()
                 .unwrap()
-                .find_subnode_with_path(path[1..].to_vec())
+                .find_subnode_by_path(path[1..].to_vec())
         }
     }
 
