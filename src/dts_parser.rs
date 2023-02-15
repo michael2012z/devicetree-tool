@@ -356,7 +356,7 @@ impl DtsParser {
                 if num[1..].starts_with("{") && num[1..].ends_with("}") {
                     // Get the full path
                     let ref_node_path = &num[2..(num.len() - 1)];
-                    let node_to_ref = self.tree.find_node_with_path(ref_node_path).unwrap();
+                    let node_to_ref = self.tree.find_node_by_path(ref_node_path).unwrap();
                     let phandle_prop = node_to_ref.lock().unwrap().find_property("phandle");
                     let phandle = if let Some(phandle_prop) = phandle_prop {
                         u32::from_be_bytes(
@@ -375,7 +375,7 @@ impl DtsParser {
                 } else {
                     // It should be a label
                     let label = &num[1..];
-                    let node_to_ref = self.tree.find_node_with_label(label).unwrap();
+                    let node_to_ref = self.tree.find_node_by_label(label).unwrap();
 
                     let phandle_prop = node_to_ref.lock().unwrap().find_property("phandle");
 
