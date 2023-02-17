@@ -1,13 +1,13 @@
 // Copyright (c) 2023, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::{node::Node, property::Property, reservation::Reservation, tree::Tree};
+use crate::{devicetree::DeviceTree, node::Node, property::Property, reservation::Reservation};
 use std::sync::{Arc, Mutex};
 
 pub struct DtsParser {
     dts: Vec<u8>,
     next_phandle: u32,
-    tree: Tree,
+    tree: DeviceTree,
 }
 
 impl DtsParser {
@@ -15,11 +15,11 @@ impl DtsParser {
         DtsParser {
             dts: dts.clone().to_owned(),
             next_phandle: 0,
-            tree: Tree::new(vec![], Node::new("/")),
+            tree: DeviceTree::new(vec![], Node::new("/")),
         }
     }
 
-    pub fn parse(&mut self) -> Tree {
+    pub fn parse(&mut self) -> DeviceTree {
         // Pre-process to remove comments and handle inclusion
         let dts_string = String::from_utf8_lossy(&self.dts);
         let dts_string = DtsParser::pre_process(&dts_string, 8);
@@ -32,7 +32,7 @@ impl DtsParser {
         for reservation in &self.tree.reservations {
             reservations_clone.push(reservation.clone());
         }
-        Tree {
+        DeviceTree {
             reservations: reservations_clone,
             root: self.tree.root.clone(),
         }
@@ -713,7 +713,7 @@ mod tests {
     #[test]
     fn test_dts_parse_label() {
         let dts = std::fs::read_to_string("test/dts_7.dts").unwrap();
-        let tree = Tree::from_dts_bytes(dts.as_bytes());
+        let tree = DeviceTree::from_dts_bytes(dts.as_bytes());
         assert_eq!(
             tree.root.lock().unwrap().sub_nodes[2]
                 .lock()
