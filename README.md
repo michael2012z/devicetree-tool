@@ -54,7 +54,7 @@ Encode a DTS file to DTB:
 
 ``` bash
 # Build devicetree-tool
-cargo build
+cargo build --release
 
 # Create a simple DTS file
 cat << EOF > ./temp.dts
