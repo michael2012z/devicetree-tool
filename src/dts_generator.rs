@@ -1,4 +1,4 @@
-// Copyright (c) 2022, Michael Zhao
+// Copyright (c) 2023, Michael Zhao
 // SPDX-License-Identifier: MIT
 
 use crate::{node::Node, property::Property, reservation::Reservation, tree::Tree, utils::Utils};
