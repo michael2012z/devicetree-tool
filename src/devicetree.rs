@@ -26,9 +26,9 @@ impl DeviceTree {
     /// Example:
     ///
     /// ```
-    /// use devicetree_tool::reservation::Reservation;
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::devicetree::DeviceTree;
+    /// use devicetree_tool::Reservation;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::DeviceTree;
     ///
     /// let tree = DeviceTree::new(vec![], Node::new(""));
     ///
@@ -50,8 +50,8 @@ impl DeviceTree {
     /// Example:
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::devicetree::DeviceTree;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::DeviceTree;
     ///
     /// let mut root = Node::new("");
     ///
@@ -77,8 +77,8 @@ impl DeviceTree {
     /// Example:
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::devicetree::DeviceTree;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::DeviceTree;
     ///
     /// let mut root = Node::new("");
     ///

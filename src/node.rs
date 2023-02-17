@@ -23,7 +23,7 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
+    /// use devicetree_tool::Node;
     ///
     /// let node = Node::new("node");
     ///
@@ -43,7 +43,7 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
+    /// use devicetree_tool::Node;
     ///
     /// let node = Node::new_with_label("node", "label");
     ///
@@ -63,8 +63,8 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::Property;
     ///
     /// let mut node = Node::new("node");
     ///
@@ -86,8 +86,8 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::Property;
     ///
     /// let mut node = Node::new("node");
     ///
@@ -111,8 +111,8 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::Property;
     ///
     /// let mut node = Node::new("node");
     ///
@@ -141,8 +141,8 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::Property;
     ///
     /// let mut node = Node::new("node");
     ///
@@ -171,8 +171,8 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::Property;
     ///
     /// let mut node = Node::new("node");
     ///
@@ -207,8 +207,8 @@ impl Node {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Node;
+    /// use devicetree_tool::Property;
     ///
     /// let mut node_layer_1 = Node::new("node_layer_1");
     ///

@@ -10,7 +10,7 @@ use crate::dts_generator::DtsGenerator;
 /// You can create an empty property with a name:
 ///
 /// ```
-/// use devicetree_tool::property::Property;
+/// use devicetree_tool::Property;
 ///
 /// let prop = Property::new_empty("prop");
 ///
@@ -20,7 +20,7 @@ use crate::dts_generator::DtsGenerator;
 /// Or create a property with value in the type of `u32`, `u64`, `str` or others.
 ///
 /// ```
-/// use devicetree_tool::property::Property;
+/// use devicetree_tool::Property;
 ///
 /// let prop = Property::new_u32("prop", 42);
 ///
@@ -37,7 +37,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_empty("prop");
     ///
@@ -56,7 +56,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_u32("prop", 42);
     ///
@@ -75,7 +75,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_u64("prop", 42);
     ///
@@ -94,7 +94,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_str("prop", "hello");
     ///
@@ -115,7 +115,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_strs("prop", vec!["hello", "abc"]);
     ///
@@ -140,7 +140,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_u8s("prop", vec![1u8, 2u8, 3u8, 4u8]);
     ///
@@ -159,7 +159,7 @@ impl Property {
     /// # Example
     ///
     /// ```
-    /// use devicetree_tool::property::Property;
+    /// use devicetree_tool::Property;
     ///
     /// let prop = Property::new_u32s("prop", vec![1u32, 2u32]);
     ///
