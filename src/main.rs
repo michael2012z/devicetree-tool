@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use argh::FromArgs;
-use devicetree_tool::devicetree::DeviceTree;
+use devicetree_tool::DeviceTree;
 
 #[derive(FromArgs)]
 /// Device tree tool

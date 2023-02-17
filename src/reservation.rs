@@ -15,7 +15,7 @@ pub struct Reservation {
 /// Example:
 ///
 /// ```
-/// use devicetree_tool::reservation::Reservation;
+/// use devicetree_tool::Reservation;
 ///
 /// let resv = Reservation::new(0, 0x1000);
 ///
