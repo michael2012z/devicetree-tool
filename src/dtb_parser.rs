@@ -1,11 +1,11 @@
 // Copyright (c) 2023, Michael Zhao
 // SPDX-License-Identifier: MIT
 
+use crate::devicetree::DeviceTree;
 use crate::dtb::DtbHeader;
 use crate::node::Node;
 use crate::property::Property;
 use crate::reservation::Reservation;
-use crate::tree::Tree;
 
 #[allow(dead_code)]
 pub struct DtbParser {
@@ -42,13 +42,13 @@ impl DtbParser {
         }
     }
 
-    pub fn parse(&self) -> Tree {
+    pub fn parse(&self) -> DeviceTree {
         let root_node = self.parse_structure_block(self.structure_block.as_ref());
         let mut reservations = vec![];
         for reservation in &self.reserve_entries {
             reservations.push(reservation.to_owned());
         }
-        Tree::new(reservations, root_node)
+        DeviceTree::new(reservations, root_node)
     }
 
     fn parse_header(header: &[u8]) -> DtbHeader {

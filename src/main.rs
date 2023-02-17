@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use argh::FromArgs;
-use devicetree_tool::tree::Tree;
+use devicetree_tool::devicetree::DeviceTree;
 
 #[derive(FromArgs)]
 /// Device tree tool
@@ -37,14 +37,14 @@ fn main() {
         println!("Encode DTS ({}) to DTB ({})", args.in_file, args.out_file);
 
         let dts = std::fs::read_to_string(&args.in_file).expect("Unable to read input file");
-        let tree = Tree::from_dts_bytes(dts.as_bytes());
+        let tree = DeviceTree::from_dts_bytes(dts.as_bytes());
         let dtb = tree.generate_dtb();
         std::fs::write(&args.out_file, dtb).expect("Unable to write output file");
     } else if &args.in_type == "dtb" && &args.out_type == "dts" {
         println!("Decode DTB ({}) to DTS ({})", args.in_file, args.out_file);
 
         let dtb = std::fs::read(&args.in_file).expect("Unable to read input file");
-        let tree = Tree::from_dtb_bytes(&dtb);
+        let tree = DeviceTree::from_dtb_bytes(&dtb);
         let dts = tree.generate_dts();
         std::fs::write(&args.out_file, dts).expect("Unable to write output file");
     } else {

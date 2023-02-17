@@ -14,12 +14,12 @@ use std::sync::{Arc, Mutex};
 /// A `Tree` struct consists of:
 ///   - The root node of the device tree (mandatory)
 ///   - And the memory reservation blocks (optional)
-pub struct Tree {
+pub struct DeviceTree {
     pub reservations: Vec<Arc<Mutex<Reservation>>>,
     pub root: Arc<Mutex<Node>>,
 }
 
-impl Tree {
+impl DeviceTree {
     /// Create a new device tree with a vector of reservation block and the root node.
     /// If there is not any reservation block, the vector should be empty.
     ///
@@ -28,9 +28,9 @@ impl Tree {
     /// ```
     /// use devicetree_tool::reservation::Reservation;
     /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::tree::Tree;
+    /// use devicetree_tool::devicetree::DeviceTree;
     ///
-    /// let tree = Tree::new(vec![], Node::new(""));
+    /// let tree = DeviceTree::new(vec![], Node::new(""));
     ///
     /// assert_eq!(format!("{}", tree), "/dts-v1/;\n\n/ {\n};\n\n");
     /// ```
@@ -39,7 +39,7 @@ impl Tree {
         for r in reservations {
             reserv_refs.push(Arc::new(Mutex::new(r)));
         }
-        Tree {
+        DeviceTree {
             reservations: reserv_refs,
             root: Arc::new(Mutex::new(root)),
         }
@@ -51,7 +51,7 @@ impl Tree {
     ///
     /// ```
     /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::tree::Tree;
+    /// use devicetree_tool::devicetree::DeviceTree;
     ///
     /// let mut root = Node::new("");
     ///
@@ -59,7 +59,7 @@ impl Tree {
     /// root.add_sub_node(Node::new_with_label("node1", "label1"));
     /// root.add_sub_node(Node::new_with_label("node2", "label2"));
     ///
-    /// let tree = Tree::new(vec![], root);
+    /// let tree = DeviceTree::new(vec![], root);
     ///
     /// // Find the nodes by their labels
     /// let node1 = tree.find_node_by_label("label1").unwrap();
@@ -78,7 +78,7 @@ impl Tree {
     ///
     /// ```
     /// use devicetree_tool::node::Node;
-    /// use devicetree_tool::tree::Tree;
+    /// use devicetree_tool::devicetree::DeviceTree;
     ///
     /// let mut root = Node::new("");
     ///
@@ -88,7 +88,7 @@ impl Tree {
     ///
     /// root.add_sub_node(node_l1);
     ///
-    /// let tree = Tree::new(vec![], root);
+    /// let tree = DeviceTree::new(vec![], root);
     ///
     /// let node_l2 = tree.find_node_by_path("/node_l1/node_l2").unwrap();
     ///
@@ -131,7 +131,7 @@ impl Tree {
     }
 }
 
-impl std::fmt::Display for Tree {
+impl std::fmt::Display for DeviceTree {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = DtsGenerator::generate_tree(self);
         writeln!(f, "{s}")
@@ -149,7 +149,7 @@ mod tests {
         let mut node = Node::new("/");
         node.add_property(Property::new_u32("prop", 42));
         node.add_sub_node(Node::new("sub_node"));
-        let tree = Tree::new(vec![], node);
+        let tree = DeviceTree::new(vec![], node);
 
         let printing = format!("{}", tree);
         assert_eq!(

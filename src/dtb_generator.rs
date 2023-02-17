@@ -202,9 +202,9 @@ impl DtbGenerator<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::devicetree::DeviceTree;
     use crate::dtb_parser::DtbParser;
     use crate::dts_generator::DtsGenerator;
-    use crate::tree::Tree;
     use std::fs::File;
     use std::io::prelude::*;
 
@@ -213,7 +213,7 @@ mod tests {
         // Build a simple device tree
         let mut root = Node::new("/");
         root.add_property(Property::new_strs("compatible", vec!["linux,dummy-virt"]));
-        let tree = Tree::new(vec![], root);
+        let tree = DeviceTree::new(vec![], root);
 
         // Generate the DTB
         let x = tree.root.lock().unwrap();
@@ -250,7 +250,7 @@ mod tests {
         root.add_property(Property::new_u32("interrupt-parent", 1u32));
 
         // Check the tree structure
-        let tree = Tree::new(vec![], root);
+        let tree = DeviceTree::new(vec![], root);
         assert_eq!(
             tree.root.lock().unwrap().properties[0].lock().unwrap().name,
             "compatible"

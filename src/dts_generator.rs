@@ -1,7 +1,9 @@
 // Copyright (c) 2023, Michael Zhao
 // SPDX-License-Identifier: MIT
 
-use crate::{node::Node, property::Property, reservation::Reservation, tree::Tree, utils::Utils};
+use crate::{
+    devicetree::DeviceTree, node::Node, property::Property, reservation::Reservation, utils::Utils,
+};
 
 pub struct DtsGenerator {}
 
@@ -66,7 +68,7 @@ impl DtsGenerator {
         ))
     }
 
-    pub fn generate_tree(tree: &Tree) -> String {
+    pub fn generate_tree(tree: &DeviceTree) -> String {
         let mut dts = String::from("/dts-v1/;\n\n");
         if tree.reservations.len() > 0 {
             for reservation in &tree.reservations {
@@ -171,7 +173,7 @@ mod tests {
     #[test]
     fn test_dts_generate_tree_simple() {
         let root = Node::new("root");
-        let tree = Tree::new(vec![], root);
+        let tree = DeviceTree::new(vec![], root);
         assert_eq!(
             DtsGenerator::generate_tree(&tree),
             "/dts-v1/;\n\nroot {\n};\n"
@@ -182,7 +184,7 @@ mod tests {
     fn test_dts_generate_tree_reservation() {
         let root = Node::new("root");
         let reservation = Reservation::new(0x0, 0x100000);
-        let tree = Tree::new(vec![reservation], root);
+        let tree = DeviceTree::new(vec![reservation], root);
         assert_eq!(
             DtsGenerator::generate_tree(&tree),
             "/dts-v1/;\n\n/memreserve/ 0x0000000000000000 0x0000000000100000;\n\nroot {\n};\n"
