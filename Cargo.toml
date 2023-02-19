@@ -1,7 +1,9 @@
 [package]
 name = "devicetree-tool"
+description = "A device tree building and parsing tool written in Rust"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
