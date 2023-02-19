@@ -4,6 +4,8 @@ A device tree building and parsing tool written in Rust
 
 ## General
 
+**This project is in early stage and should not be used with production workloads.**
+
 `devicetree-tool` is both:
 - A Rust crate that can be used for manipulating device trees
 - A command line tool based on the crate that can be used to encode and decode device tree files
@@ -77,6 +79,7 @@ cat << EOF > ./temp.dts
 EOF
 
 # Decode the DTS file into DTB
-./target/release/devicetree-tool --in-type dts --in-file ./temp.dts \
+./target/release/devicetree-tool \
+    --in-type dts --in-file ./temp.dts \
     --out-type dtb --out-file ./temp.dtb
 ```

@@ -1,7 +1,7 @@
 [package]
 name = "devicetree-tool"
 description = "A device tree building and parsing tool written in Rust"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
 authors = ["Michael Zhao <michael2012zhao@hotmail.com>"]
