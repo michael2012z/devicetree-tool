@@ -4,7 +4,6 @@
 mod devicetree;
 pub use devicetree::DeviceTree;
 mod dtb;
-pub use dtb::DtbHeader;
 mod dtb_generator;
 mod dtb_parser;
 mod dts_generator;
