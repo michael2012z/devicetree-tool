@@ -41,7 +41,8 @@ fn main() {
 
     assert_eq!(
         format!("{}", tree),
-        "/dts-v1/;\n\n/ {\n\tprop = <0x0 0x0 0x0 0x2a>;\n\n\tsub_node {\n\t};\n};\n\n"
+        "/dts-v1/;\n\n/ {\n\tprop = <0x0 0x0 0x0 0x2a>;\
+        \n\n\tsub_node {\n\t};\n};\n\n"
     );
 }
 ```
@@ -76,5 +77,6 @@ cat << EOF > ./temp.dts
 EOF
 
 # Decode the DTS file into DTB
-./target/release/devicetree-tool --in-type dts --in-file ./temp.dts --out-type dtb --out-file ./temp.dtb
+./target/release/devicetree-tool --in-type dts --in-file ./temp.dts \
+    --out-type dtb --out-file ./temp.dtb
 ```
