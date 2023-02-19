@@ -9,9 +9,9 @@ use crate::node::Node;
 use crate::reservation::Reservation;
 use std::sync::{Arc, Mutex};
 
-/// `Tree` contains everything of a device tree.
+/// A device tree.
 ///
-/// A `Tree` struct consists of:
+/// The `Tree` struct consists of:
 ///   - The root node of the device tree (mandatory)
 ///   - And the memory reservation blocks (optional)
 pub struct DeviceTree {
