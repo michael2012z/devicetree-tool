@@ -180,7 +180,7 @@ impl DtsParser {
                     println!("found property {prop_name} with value:");
                     i = i + 1;
                     let (property_value_size, property_value) =
-                        self.parse_property_value(&dts[i..], node_only);
+                        self.parse_property_value(&dts[i..], node_only)?;
                     i = i + property_value_size;
                     text.clear();
                     if !node_only {
@@ -258,10 +258,14 @@ impl DtsParser {
                 }
             }
         }
-        Err(format!("property not ended"))
+        Err("property not ended".into())
     }
 
-    fn parse_property_value(&mut self, dts: &[u8], ignore_content: bool) -> (usize, Vec<u8>) {
+    fn parse_property_value(
+        &mut self,
+        dts: &[u8],
+        ignore_content: bool,
+    ) -> Result<(usize, Vec<u8>), String> {
         let mut value: Vec<u8> = vec![];
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -277,14 +281,14 @@ impl DtsParser {
                 '<' => {
                     // Cell type
                     if value_type != 0 {
-                        panic!("found cell-start while parsing another property type {value_type}")
+                        return Err(format!("found cell-start while parsing another property type {value_type}"));
                     }
                     value_type = 1;
                     text.clear();
                 }
                 '>' => {
                     if value_type != 1 {
-                        panic!("found cell-end while parsing another property type {value_type}")
+                        return Err(format!("found cell-end while parsing another property type {value_type}"));
                     }
                     value_type = 0;
 
@@ -299,7 +303,7 @@ impl DtsParser {
                 '[' => {
                     // Bytes type
                     if value_type != 0 {
-                        panic!("found bytes-start while parsing another property type {value_type}")
+                        return Err(format!("found bytes-start while parsing another property type {value_type}"));
                     }
 
                     value_type = 2;
@@ -307,7 +311,7 @@ impl DtsParser {
                 }
                 ']' => {
                     if value_type != 2 {
-                        panic!("found bytes-end while parsing another property type {value_type}")
+                        return Err(format!("found bytes-end while parsing another property type {value_type}"));
                     }
                     value_type = 0;
 
@@ -336,7 +340,7 @@ impl DtsParser {
                         }
                         text.clear();
                     } else {
-                        panic!("found string while parsing another property type {value_type}")
+                        return Err(format!("found string while parsing another property type {value_type}"));
                     }
                 }
                 '\\' => {
@@ -348,7 +352,7 @@ impl DtsParser {
                 ';' => {
                     // Conclude the property
                     // This is the only exit of the function
-                    return (i + 1, value);
+                    return Ok((i + 1, value));
                 }
                 _ => {
                     text.push(dts[i]);
@@ -356,7 +360,7 @@ impl DtsParser {
             }
             i = i + 1;
         }
-        panic!("property not ended");
+        Err("property not ended".into())
     }
 
     fn parse_property_value_cells(&mut self, text: &[u8]) -> Vec<u8> {
