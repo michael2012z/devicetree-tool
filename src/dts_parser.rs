@@ -356,48 +356,60 @@ impl DtsParser {
                 if num[1..].starts_with("{") && num[1..].ends_with("}") {
                     // Get the full path
                     let ref_node_path = &num[2..(num.len() - 1)];
-                    let node_to_ref = self.tree.find_node_by_path(ref_node_path).unwrap();
-                    let phandle_prop = node_to_ref.lock().unwrap().find_property("phandle");
-                    let phandle = if let Some(phandle_prop) = phandle_prop {
-                        u32::from_be_bytes(
-                            phandle_prop.lock().unwrap().value[0..4].try_into().unwrap(),
-                        )
+                    let node_to_ref = match self.tree.find_node_by_path(ref_node_path) {
+                        Some(n) => n,
+                        None => continue,
+                    };
+                    let phandle_prop = match node_to_ref.lock() {
+                        Ok(n) => n.find_property("phandle"),
+                        Err(_) => continue,
+                    };
+                    if let Some(phandle_prop) = phandle_prop {
+                        let value = match phandle_prop.lock() {
+                            Ok(p) => [p.value[0], p.value[1], p.value[2], p.value[3]],
+                            Err(_) => continue,
+                        };
+                        u32::from_be_bytes(value)
                     } else {
                         let phandle = self.next_phandle;
                         self.next_phandle = self.next_phandle + 1;
-                        node_to_ref
-                            .lock()
-                            .unwrap()
-                            .add_property(Property::new_u32("phandle", phandle));
+                        if let Ok(mut n) = node_to_ref.lock() {
+                            n.add_property(Property::new_u32("phandle", phandle));
+                        };
                         phandle
-                    };
-                    phandle
+                    }
                 } else {
                     // It should be a label
                     let label = &num[1..];
-                    let node_to_ref = self.tree.find_node_by_label(label).unwrap();
+                    let node_to_ref = match self.tree.find_node_by_label(label) {
+                        Some(n) => n,
+                        None => continue,
+                    };
 
-                    let phandle_prop = node_to_ref.lock().unwrap().find_property("phandle");
+                    let phandle_prop = match node_to_ref.lock() {
+                        Ok(n) => n.find_property("phandle"),
+                        Err(_) => continue,
+                    };
 
-                    let phandle = if let Some(phandle_prop) = phandle_prop {
-                        u32::from_be_bytes(
-                            phandle_prop.lock().unwrap().value[0..4].try_into().unwrap(),
-                        )
+                    if let Some(phandle_prop) = phandle_prop {
+                        let value = match phandle_prop.lock() {
+                            Ok(p) => [p.value[0], p.value[1], p.value[2], p.value[3]],
+                            Err(_) => continue,
+                        };
+                        u32::from_be_bytes(value)
                     } else {
                         let phandle = self.next_phandle;
                         self.next_phandle = self.next_phandle + 1;
-                        node_to_ref
-                            .lock()
-                            .unwrap()
-                            .add_property(Property::new_u32("phandle", phandle));
+                        if let Ok(mut n) = node_to_ref.lock() {
+                            n.add_property(Property::new_u32("phandle", phandle));
+                        }
                         phandle
-                    };
-                    phandle
+                    }
                 }
             } else if num.starts_with("0x") {
-                u32::from_str_radix(&num[2..], 16).unwrap()
+                u32::from_str_radix(&num[2..], 16).unwrap_or(0)
             } else {
-                u32::from_str_radix(num, 10).unwrap()
+                u32::from_str_radix(num, 10).unwrap_or(0)
             };
             let n_u8_vec = n.to_be_bytes().to_vec();
             for n in n_u8_vec {
