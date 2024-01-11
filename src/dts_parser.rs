@@ -25,8 +25,8 @@ impl DtsParser {
         let dts_string = DtsParser::pre_process(&dts_string, 8).unwrap_or(dts_string.into());
         let dts = dts_string.as_bytes();
 
-        self.parse_tree(dts, true);
-        self.parse_tree(dts, false);
+        self.parse_tree(dts, true).ok();
+        self.parse_tree(dts, false).ok();
 
         let mut reservations_clone = vec![];
         for reservation in &self.tree.reservations {
@@ -41,7 +41,7 @@ impl DtsParser {
     // Parse the DTS text that has been pre-processed and update the tree struct.
     // If `node_only` is true, only parse the node structure, and create nodes and subnodes
     // in the tree with names, all properties and indirectives will be ignored.
-    fn parse_tree(&mut self, dts: &[u8], node_only: bool) {
+    fn parse_tree(&mut self, dts: &[u8], node_only: bool) -> Result<(), String> {
         let root_node = self.tree.root.clone();
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
@@ -62,18 +62,21 @@ impl DtsParser {
                         println!("detected /dts-v1/;");
                     } else if statement.starts_with("/memreserve/") {
                         let mut reservation = statement.split_ascii_whitespace();
-                        let _ = reservation.next().unwrap();
-                        let address = reservation.next().unwrap();
+                        let address = reservation.nth(1).ok_or(format!("missing address: {statement}"))?;
                         let address = if address.starts_with("0x") {
-                            u64::from_str_radix(&address[2..], 16).unwrap()
+                            u64::from_str_radix(&address[2..], 16)
+                                .map_err(|err| format!("invalid address: {address}, error: {err}"))?
                         } else {
-                            u64::from_str_radix(address, 10).unwrap()
+                            u64::from_str_radix(address, 10)
+                                .map_err(|err| format!("invalid address: {address}, error: {err}"))?
                         };
-                        let length = reservation.next().unwrap();
+                        let length = reservation.next().ok_or(format!("missing length: {statement}"))?;
                         let length = if length.starts_with("0x") {
-                            u64::from_str_radix(&length[2..], 16).unwrap()
+                            u64::from_str_radix(&length[2..], 16)
+                                .map_err(|err| format!("invalid length: {length}, error: {err}"))?
                         } else {
-                            u64::from_str_radix(length, 10).unwrap()
+                            u64::from_str_radix(length, 10)
+                                .map_err(|err| format!("invalid length: {length}, error: {err}"))?
                         };
                         println!(
                             "detected /memreserve/: address = {:#018x}, length = {:#018x}",
@@ -83,7 +86,7 @@ impl DtsParser {
                             .reservations
                             .push(Arc::new(Mutex::new(Reservation::new(address, length))));
                     } else {
-                        panic!("unknown top-level statement: {statement}");
+                        return Err(format!("unknown top-level statement: {statement}"));
                     }
                 }
                 '{' => {
@@ -93,7 +96,7 @@ impl DtsParser {
 
                     // The node name must be "/", fail otherwise
                     if node_name != "/" {
-                        panic!("node {node_name} is not expected")
+                        return Err(format!("node {node_name} is not expected"));
                     }
 
                     i = i + 1;
@@ -108,6 +111,7 @@ impl DtsParser {
                 }
             }
         }
+        Ok(())
     }
 
     fn parse_node(
@@ -211,16 +215,23 @@ impl DtsParser {
                             let directive = prop_name;
                             println!("found directive: {directive}");
                             let mut slices = directive.split_ascii_whitespace();
-                            let instruction = slices.next().unwrap();
+                            let instruction = slices
+                                .next()
+                                .ok_or(format!("missing instruction: {directive}"))?;
                             if instruction == "/delete-node/" {
-                                let sub_node_name = slices.next().unwrap();
+                                let sub_node_name = slices
+                                    .next()
+                                    .ok_or(format!("missing sub node: {directive}"))?;
                                 println!("delete node: {sub_node_name}");
                                 let sub_node_index = node
                                     .lock()
                                     .map_err(|err| format!("node lock: {err}"))?
                                     .sub_nodes
                                     .iter()
-                                    .position(|x| x.lock().unwrap().name == sub_node_name)
+                                    .position(|x| match x.lock() {
+                                        Ok(n) => n.name == sub_node_name,
+                                        Err(_) => false,
+                                    })
                                     .ok_or(format!("missing sub node: {sub_node_name}"))?;
                                 node
                                     .lock()
@@ -235,7 +246,10 @@ impl DtsParser {
                                     .map_err(|err| format!("node lock: {err}"))?
                                     .properties
                                     .iter()
-                                    .position(|x| x.lock().unwrap().name == property_name)
+                                    .position(|x| match x.lock() {
+                                        Ok(n) => n.name == property_name,
+                                        Err(_) => false,
+                                    })
                                     .ok_or(format!("missing property: {property_name}"))?;
                                 node
                                     .lock()
@@ -497,7 +511,8 @@ impl DtsParser {
                     }
                     let path = &path[1..(path.len() - 1)];
                     println!("path: {path}");
-                    let included_dts = std::fs::read_to_string(path).unwrap();
+                    let included_dts = std::fs::read_to_string(path)
+                        .map_err(|err| format!("unable to read included DTS: {err}"))?;
                     let included_dts = DtsParser::pre_process(&included_dts, inclusion_depth - 1)
                         .unwrap_or(included_dts);
                     processed_dts.push_str(&included_dts);
