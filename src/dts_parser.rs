@@ -19,23 +19,23 @@ impl DtsParser {
         }
     }
 
-    pub fn parse(&mut self) -> DeviceTree {
+    pub fn parse(&mut self) -> Result<DeviceTree, String> {
         // Pre-process to remove comments and handle inclusion
         let dts_string = String::from_utf8_lossy(&self.dts);
-        let dts_string = DtsParser::pre_process(&dts_string, 8).unwrap_or(dts_string.into());
+        let dts_string = DtsParser::pre_process(&dts_string, 8)?;
         let dts = dts_string.as_bytes();
 
-        self.parse_tree(dts, true).ok();
-        self.parse_tree(dts, false).ok();
+        self.parse_tree(dts, true)?;
+        self.parse_tree(dts, false)?;
 
         let mut reservations_clone = vec![];
         for reservation in &self.tree.reservations {
             reservations_clone.push(reservation.clone());
         }
-        DeviceTree {
+        Ok(DeviceTree {
             reservations: reservations_clone,
             root: self.tree.root.clone(),
-        }
+        })
     }
 
     // Parse the DTS text that has been pre-processed and update the tree struct.
@@ -623,7 +623,7 @@ mod tests {
     fn test_dts_parse_0() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_0.dts").unwrap();
-        let tree = DtsParser::from_bytes(&dts).parse();
+        let tree = DtsParser::from_bytes(&dts).parse().unwrap();
         assert_eq!(tree.root.lock().unwrap().properties.len(), 4);
     }
 
@@ -631,7 +631,7 @@ mod tests {
     fn test_dts_parse_1() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_2.dts").unwrap();
-        let tree = DtsParser::from_bytes(&dts).parse();
+        let tree = DtsParser::from_bytes(&dts).parse().unwrap();
         assert_eq!(tree.root.lock().unwrap().sub_nodes.len(), 1);
         let node_cpus = &tree.root.lock().unwrap().sub_nodes[0];
         assert_eq!(node_cpus.lock().unwrap().sub_nodes.len(), 2);
@@ -706,7 +706,7 @@ mod tests {
     fn test_dts_parse_reservation() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_4.dts").unwrap();
-        let tree = DtsParser::from_bytes(&dts).parse();
+        let tree = DtsParser::from_bytes(&dts).parse().unwrap();
         assert_eq!(tree.reservations.len(), 5);
         assert_eq!(tree.reservations[0].lock().unwrap().address, 0x0);
         assert_eq!(tree.reservations[0].lock().unwrap().length, 0x100000);
@@ -718,7 +718,7 @@ mod tests {
     fn test_dts_parse_deletion() {
         // Read the DTS text from test data folder
         let dts = std::fs::read("test/dts_5.dts").unwrap();
-        let tree = DtsParser::from_bytes(&dts).parse();
+        let tree = DtsParser::from_bytes(&dts).parse().unwrap();
 
         assert_eq!(tree.root.lock().unwrap().sub_nodes.len(), 1);
         assert_eq!(

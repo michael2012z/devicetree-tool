@@ -108,7 +108,14 @@ impl DeviceTree {
 
     /// Create a `Tree` from DTS text byte array.
     pub fn from_dts_bytes(dts: &[u8]) -> Self {
-        DtsParser::from_bytes(&dts).parse()
+        // FIXME: make this function fallible, and bubble-up the error instead of silently failing
+        match DtsParser::from_bytes(&dts).parse() {
+            Ok(tree) => tree,
+            Err(err) => {
+                println!("Error parsing the DTS tree: {err}");
+                Self::new(vec![], Node::new(""))
+            }
+        }
     }
 
     /// Generate the DTS text of a `Tree`.
