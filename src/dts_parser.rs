@@ -98,7 +98,7 @@ impl DtsParser {
 
                     i = i + 1;
                     // Update the root node content
-                    let node_size = self.parse_node(&dts[i..], root_node.clone(), node_only);
+                    let node_size = self.parse_node(&dts[i..], root_node.clone(), node_only).unwrap_or(0);
                     i = i + node_size;
                     text.clear();
                 }
@@ -110,7 +110,12 @@ impl DtsParser {
         }
     }
 
-    fn parse_node(&mut self, dts: &[u8], node: Arc<Mutex<Node>>, node_only: bool) -> usize {
+    fn parse_node(
+        &mut self,
+        dts: &[u8],
+        node: Arc<Mutex<Node>>,
+        node_only: bool,
+    ) -> Result<usize, String> {
         let mut i: usize = 0;
         let mut text: Vec<u8> = vec![];
         let mut at_end = false;
@@ -120,7 +125,7 @@ impl DtsParser {
                     // Found node
                     let sub_node_name =
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
-                    println!("found node {}", sub_node_name);
+                    println!("found node {sub_node_name}");
 
                     let (label, sub_node_name) = if sub_node_name.contains(":") {
                         let parts: Vec<&str> = sub_node_name.split(":").collect();
@@ -132,10 +137,13 @@ impl DtsParser {
                     // If a sub_node with the name doesn't exist, create one
                     if !node
                         .lock()
-                        .unwrap()
+                        .map_err(|err| format!("node lock: {err}"))?
                         .sub_nodes
                         .iter()
-                        .any(|x| &x.lock().unwrap().name == &sub_node_name)
+                        .any(|x| match x.lock() {
+                            Ok(n) => n.name == sub_node_name,
+                            Err(_) => false,
+                        })
                     {
                         let new_sub_node = if let Some(label) = label {
                             Node::new_with_label(&sub_node_name, &label)
@@ -143,18 +151,20 @@ impl DtsParser {
                             Node::new(&sub_node_name)
                         };
 
-                        node.lock().unwrap().add_sub_node(new_sub_node);
+                        if let Ok(mut n) = node.lock() {
+                            n.add_sub_node(new_sub_node);
+                        }
                     }
 
                     // Get the sub_node out and update
                     let sub_node = node
                         .lock()
-                        .unwrap()
+                        .map_err(|err| format!("node lock: {err}"))?
                         .find_subnode_by_name(&sub_node_name)
-                        .unwrap();
+                        .ok_or(format!("no sub node: {sub_node_name}"))?;
 
                     i = i + 1;
-                    let node_size = self.parse_node(&dts[i..], sub_node, node_only);
+                    let node_size = self.parse_node(&dts[i..], sub_node, node_only).unwrap_or(0);
                     i = i + node_size;
                     text.clear();
                 }
@@ -167,7 +177,7 @@ impl DtsParser {
                     // Found a property with value
                     let prop_name =
                         &String::from(String::from_utf8_lossy(&text).to_string().trim());
-                    println!("found property {} with value:", prop_name);
+                    println!("found property {prop_name} with value:");
                     i = i + 1;
                     let (property_value_size, property_value) =
                         self.parse_property_value(&dts[i..], node_only);
@@ -175,7 +185,7 @@ impl DtsParser {
                     text.clear();
                     if !node_only {
                         let prop = Property::new_u8s(prop_name, property_value);
-                        node.lock().unwrap().add_property(prop);
+                        node.lock().map_err(|err| format!("node lock: {err}"))?.add_property(prop);
                     }
                 }
                 ';' => {
@@ -185,7 +195,7 @@ impl DtsParser {
                     //  - Or the end of the node
                     i = i + 1;
                     if at_end {
-                        return i;
+                        return Ok(i);
                     } else {
                         // A property without value or a comipler directive
                         let prop_name =
@@ -207,30 +217,38 @@ impl DtsParser {
                                 println!("delete node: {sub_node_name}");
                                 let sub_node_index = node
                                     .lock()
-                                    .unwrap()
+                                    .map_err(|err| format!("node lock: {err}"))?
                                     .sub_nodes
                                     .iter()
                                     .position(|x| x.lock().unwrap().name == sub_node_name)
-                                    .unwrap();
-                                node.lock().unwrap().sub_nodes.remove(sub_node_index);
+                                    .ok_or(format!("missing sub node: {sub_node_name}"))?;
+                                node
+                                    .lock()
+                                    .map_err(|err| format!("node lock: {err}"))?
+                                    .sub_nodes
+                                    .remove(sub_node_index);
                             } else if instruction == "/delete-property/" {
                                 let property_name = slices.next().unwrap();
                                 println!("delete property: {property_name}");
                                 let property_index = node
                                     .lock()
-                                    .unwrap()
+                                    .map_err(|err| format!("node lock: {err}"))?
                                     .properties
                                     .iter()
                                     .position(|x| x.lock().unwrap().name == property_name)
-                                    .unwrap();
-                                node.lock().unwrap().properties.remove(property_index);
+                                    .ok_or(format!("missing property: {property_name}"))?;
+                                node
+                                    .lock()
+                                    .map_err(|err| format!("node lock: {err}"))?
+                                    .properties
+                                    .remove(property_index);
                             } else {
-                                panic!("unknown comipler directive {directive}")
+                                return Err(format!("unknown comipler directive {directive}"));
                             }
                         } else {
                             println!("found property {} without value", prop_name);
                             let prop = Property::new_empty(&prop_name);
-                            node.lock().unwrap().add_property(prop);
+                            node.lock().map_err(|err| format!("node lock: {err}"))?.add_property(prop);
                         }
                     }
                 }
@@ -240,7 +258,7 @@ impl DtsParser {
                 }
             }
         }
-        panic!("property not ended");
+        Err(format!("property not ended"))
     }
 
     fn parse_property_value(&mut self, dts: &[u8], ignore_content: bool) -> (usize, Vec<u8>) {
@@ -415,7 +433,7 @@ impl DtsParser {
             for n in n_u8_vec {
                 value.push(n);
             }
-            println!("{:x}", n);
+            println!("{n:x}");
         }
         value
     }
@@ -437,7 +455,7 @@ impl DtsParser {
                 }
             };
             value.push(n);
-            println!("{:x}", n);
+            println!("{n:x}");
         }
         value
     }
