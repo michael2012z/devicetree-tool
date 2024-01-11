@@ -13,7 +13,7 @@ pub struct DtsParser {
 impl DtsParser {
     pub fn from_bytes(dts: &[u8]) -> Self {
         DtsParser {
-            dts: dts.clone().to_owned(),
+            dts: dts.to_owned(),
             next_phandle: 0,
             tree: DeviceTree::new(vec![], Node::new("/")),
         }
@@ -22,7 +22,7 @@ impl DtsParser {
     pub fn parse(&mut self) -> DeviceTree {
         // Pre-process to remove comments and handle inclusion
         let dts_string = String::from_utf8_lossy(&self.dts);
-        let dts_string = DtsParser::pre_process(&dts_string, 8);
+        let dts_string = DtsParser::pre_process(&dts_string, 8).unwrap_or(dts_string.into());
         let dts = dts_string.as_bytes();
 
         self.parse_tree(dts, true);
@@ -426,9 +426,15 @@ impl DtsParser {
         println!("bytes:");
         for num in String::from_utf8_lossy(text).split_whitespace() {
             let n = if num.starts_with("0x") {
-                u8::from_str_radix(&num[2..], 16).unwrap()
+                match u8::from_str_radix(&num[2..], 16) {
+                    Ok(n) => n,
+                    Err(_) => continue,
+                }
             } else {
-                u8::from_str_radix(num, 10).unwrap()
+                match u8::from_str_radix(num, 10) {
+                    Ok(n) => n,
+                    Err(_) => continue,
+                }
             };
             value.push(n);
             println!("{:x}", n);
@@ -444,45 +450,43 @@ impl DtsParser {
         bytes
     }
 
-    fn pre_process(dts: &str, inclusion_depth: usize) -> String {
+    fn pre_process(dts: &str, inclusion_depth: usize) -> Result<String, String> {
         if inclusion_depth == 0 {
-            panic!("maximum inclusion depth reached")
-        }
-        let dts_bytes = dts.as_bytes();
-        let dts_bytes = &DtsParser::remove_c_style_comments(dts_bytes);
-        let dts_bytes = &DtsParser::remove_cpp_style_comments(dts_bytes);
+            Err(format!("maximum inclusion depth reached"))
+        } else {
+            let dts_bytes = dts.as_bytes();
+            let dts_bytes = &DtsParser::remove_c_style_comments(dts_bytes);
+            let dts_bytes = &DtsParser::remove_cpp_style_comments(dts_bytes);
 
-        let dts = String::from_utf8_lossy(dts_bytes);
+            let dts = String::from_utf8_lossy(dts_bytes);
 
-        let mut processed_dts = String::new();
-        let lines: Vec<&str> = dts.split("\n").collect();
-        for line in lines {
-            if line.find("/include/").is_some() {
-                let index = line.find("/include/").unwrap();
+            let mut processed_dts = String::new();
+            let lines: Vec<&str> = dts.split("\n").collect();
+            for line in lines {
+                if let Some(index) = line.find("/include/") {
+                    if index > 0 {
+                        // something is before the `/include/`
+                        processed_dts.push_str(&line[0..index]);
+                    }
 
-                if index > 0 {
-                    // something is before the `/include/`
-                    processed_dts.push_str(&line[0..index]);
+                    let path = line[(index + 9)..].trim();
+                    if !path.starts_with('"') || !path.ends_with('"') {
+                        return Err(format!("included file path error: {path}"))
+                    }
+                    let path = &path[1..(path.len() - 1)];
+                    println!("path: {path}");
+                    let included_dts = std::fs::read_to_string(path).unwrap();
+                    let included_dts = DtsParser::pre_process(&included_dts, inclusion_depth - 1)
+                        .unwrap_or(included_dts);
+                    processed_dts.push_str(&included_dts);
+                    processed_dts.push('\n');
+                } else {
+                    processed_dts.push_str(line);
+                    processed_dts.push('\n');
                 }
-
-                let path = line[(index + 9)..].trim();
-                if path.chars().nth(0).unwrap() != '"'
-                    || path.chars().nth(path.len() - 1).unwrap() != '"'
-                {
-                    panic!("included file path error: {path}")
-                }
-                let path = &path[1..(path.len() - 1)];
-                println!("path: {path}");
-                let included_dts = std::fs::read_to_string(path).unwrap();
-                let included_dts = DtsParser::pre_process(&included_dts, inclusion_depth - 1);
-                processed_dts.push_str(&included_dts);
-                processed_dts.push('\n');
-            } else {
-                processed_dts.push_str(line);
-                processed_dts.push('\n');
             }
+            Ok(processed_dts)
         }
-        processed_dts
     }
 
     // Return the space of a C-style comment: (start location, size)
@@ -717,7 +721,7 @@ mod tests {
     #[test]
     fn test_dts_parse_pre_process() {
         let dts = std::fs::read_to_string("test/dts_6.dts").unwrap();
-        let dts = DtsParser::pre_process(&dts, 8);
+        let dts = DtsParser::pre_process(&dts, 8).unwrap_or(dts);
         assert_eq!(dts.find("/include/").is_none(), true);
         assert_eq!(dts.find("#address-cells").is_some(), true);
     }
